@@ -1,5 +1,5 @@
-#if MAESTRO_WINDOWS
-using PresetMaestro.Midi;
+#if SENDER_WINDOWS
+using PresetSender.Midi;
 using Windows.Devices.Midi2;
 using Windows.Devices.Midi2.Transports.Loopback;
 

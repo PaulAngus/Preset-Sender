@@ -1,8 +1,10 @@
 # Preset Sender
 
-A separate compact MIDI Program Change utility. It reuses PresetMaestro's Windows and macOS MIDI backends and message encoder, without its profiles, favorites, Fractal protocols, device queries, or preset scans. The utility has its own settings and release version.
+A compact MIDI Program Change utility with its own settings, tests, branding and releases. This repository builds independently: its Windows and macOS MIDI backends, message encoder and platform configuration are included here. PresetMaestro is not required. The application remains named **Preset Sender**, although its repository is named **Preset-Forwarder**.
 
 ## Use
+
+On Windows, copy just `PresetSender.exe` to the other PC and launch it. The executable includes the .NET runtime and Windows MIDI API components; it automatically unpacks them into the runtime's per-user cache. No companion files or application installer are required. Windows MIDI Services must still be available for the built-in virtual output.
 
 1. Open `PresetSender.exe`. Expand **MIDI connection** and select **Preset Sender (virtual device)** to publish an input that other apps on this PC can receive from. Click **Connect**, then select **Preset Sender** in the receiving app's MIDI input list. Alternatively, select an existing hardware or virtual output. An input controller is optional; the computer keyboard needs none. Connecting sends no program changes (virtual MIDI protocol discovery happens automatically). Connection settings collapse after connection; **Disconnect** remains visible.
 2. In **Program options**, set **Output channel** to a single channel (1–16) or **All channels**, and choose **Preset numbering**. All channels sends the same Program Change once on each of the 16 channels. This is the sending equivalent of the requested omni option; MIDI's formal Omni mode is a receiver setting. A receiver listening to all channels may process the change 16 times, so prefer a single channel for that receiver. The default is channel 1 and zero-based numbering: displayed `42` sends MIDI PC 42. One-based numbering sends PC 41 for displayed `42`.
@@ -23,7 +25,7 @@ Nonzero note-on and CC values count as presses; release with note-off, velocity-
 
 On Windows 11 25H2 or later with compatible, updated Windows MIDI Services components, **Preset Sender (virtual device)** publishes a named MIDI source while connected. Other apps select **Preset Sender** as an **input**, including legacy MIDI 1.0 apps when Windows MIDI Services' legacy API integration is enabled. The internal **Preset Sender (Relay)** port also appears; choose the name without that suffix. A symmetric Windows loopback pair avoids the virtual-device cleanup path that stalled MidiSrv during coexistence testing. If a receiver only discovers ports at startup, connect Preset Sender before starting that receiver. Disconnecting or closing Preset Sender removes both ports. Only one instance can publish this device at a time. No third-party virtual MIDI driver is installed.
 
-This implementation uses Microsoft's **Windows MIDI Services preview 10 API** (`0.99.88-preview.10`). Consult the [Microsoft minimum requirements](https://microsoft.github.io/MIDI/kb/minimum-requirements/) and [preview release notes and distribution terms](https://github.com/microsoft/MIDI/releases/tag/inbox-preview-10). Public distribution of the preview API requires the developer to meet those terms, including updates as the API changes. The package ships its MIDI DLL and resource file beside the executable; keep those files together. The existing hardware-output path remains usable on older Windows versions.
+This implementation uses Microsoft's **Windows MIDI Services preview 10 API** (`0.99.88-preview.10`). Consult the [Microsoft minimum requirements](https://microsoft.github.io/MIDI/kb/minimum-requirements/) and [preview release notes and distribution terms](https://github.com/microsoft/MIDI/releases/tag/inbox-preview-10). Public distribution of the preview API requires the developer to meet those terms, including updates as the API changes. The standalone executable embeds its MIDI DLL and resource file and automatically extracts them into the runtime cache. The existing hardware-output path remains usable on older Windows versions.
 
 **Native validation (11 October 2026):** the native integration check passed with the symmetric loopback publisher: two simultaneous legacy MIDI receivers both received PC 42 on channel 6 and PC 127 on each of channels 1–16, and the endpoints disappeared on disconnect. The published sender also passed MIDI Forwarder 1.0.2's coexistence check: both startup orders, two receivers on all channels, three forwarder start/stop cycles, bidirectional forwarding/SysEx and clean sender shutdown. No physical hardware was used in that check. Specific target-app preset mapping, such as AmpliTube, remains a separate setup step. The isolated sender host limits an unresponsive-service connection attempt to 15 seconds.
 
@@ -37,27 +39,42 @@ Settings are saved separately under `%APPDATA%\PresetSender\settings.json` on Wi
 
 ## Develop and package
 
-From the repository root with .NET 10:
+From the repository root with .NET 10 on Windows:
 
 ```powershell
-./PresetSender/Initialize-MidiSdk.ps1
-dotnet run --project PresetSender/PresetSender.csproj
-dotnet test PresetSender/PresetSender.slnx -c Release
-dotnet format PresetSender/PresetSender.slnx --verify-no-changes
-./PresetSender/Publish-PresetSender.ps1
+./Initialize-MidiSdk.ps1
+dotnet build PresetSender.slnx -c Release
+dotnet run --project PresetSender.csproj
+dotnet test PresetSender.slnx -c Release
+dotnet format PresetSender.slnx --verify-no-changes
+./Publish-PresetSender.ps1
 ```
 
-The initialization script downloads a pinned, checksum-verified Microsoft preview NuGet package into the ignored local package feed. Run it before the first Windows build on a fresh checkout; the publish script runs it automatically. The publish script creates a self-contained Windows x64 executable **plus the two Windows MIDI API sidecar files** in `PresetSender/artifacts/windows/`. Keep the directory together. It requires no separately installed .NET runtime and does not change PresetMaestro's version or release output. This utility has its own solution, so its checks are separate from the main application's solution.
+The initialization script downloads a pinned, checksum-verified Microsoft preview NuGet package into the ignored `packages/` feed. Run it before the first Windows build on a fresh checkout; the publish script runs it automatically. The publish script creates a standalone Windows x64 executable at `artifacts/windows/PresetSender.exe`. Full bundle extraction includes both Windows MIDI API components and makes them available to WinRT activation without companion files. The virtual MIDI subprocess launches the original executable rather than looking in the extraction cache. It requires no separately installed .NET runtime.
 
 Normal tests simulate MIDI and do not contact hardware or create system endpoints. The native check covers two simultaneous legacy MIDI receivers, channel 6 individually, all sixteen wire channels, and removal of both loopback endpoints. To run it explicitly:
 
 ```powershell
 $env:PRESET_SENDER_NATIVE_MIDI_TEST = '1'
-dotnet test PresetSender/PresetSender.slnx -c Release --filter FullyQualifiedName~VirtualMidiIntegrationTests
+dotnet test PresetSender.slnx -c Release --filter FullyQualifiedName~VirtualMidiIntegrationTests
 Remove-Item Env:PRESET_SENDER_NATIVE_MIDI_TEST
 ```
 
-The project also selects the existing macOS/CoreMIDI backend when built on macOS (or with `-p:MaestroPlatform=macOS`). Native Mac launch and MIDI acceptance remain unverified; this task's runnable package is Windows only.
+To test the packaged executable, also set `PRESET_SENDER_TEST_EXE` to its absolute path before running the native check. Copy only the EXE into an empty directory and set `DOTNET_BUNDLE_EXTRACT_BASE_DIR` to a fresh cache directory to check extraction. On 12 October 2026, all 26 tests passed using that setup, including two MIDI receivers, all sixteen channels, and endpoint removal. Both MIDI API files were extracted from the EXE. This confirms standalone packaging on the development PC; the other PC still needs compatible Windows MIDI Services.
+
+The packaging uses Microsoft's [single-file deployment and full extraction guidance](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview). Full extraction lets the WinRT projection locate the native MIDI component in `AppContext.BaseDirectory`.
+
+On macOS, run `dotnet build PresetSender.slnx -c Release`, `dotnet test PresetSender.slnx -c Release`, or `dotnet run --project PresetSender.csproj` directly; the Windows MIDI initialization script is unnecessary. Platform selection follows the host or runtime identifier, with `-p:SenderPlatform=macOS` available for explicit selection. Native Mac launch and MIDI acceptance remain unverified on this Windows development PC.
+
+The repository includes Windows and macOS CI jobs for builds, simulated tests and formatting. The Windows job also packages the standalone EXE. Native MIDI checks remain opt-in and are not run in CI.
+
+## Repository migration
+
+Preset Sender moved from PresetMaestro's `PresetSender/` directory on 12 October 2026. Its committed directory history was extracted with `git subtree split`, retaining authorship, dates and changes at this repository's root. The current uncommitted sender changes were carried across before separating the builds. The small MIDI transport, encoder and platform adapters were copied into `Midi/` and `Platforms/`; their namespaces and platform symbols now belong to Preset Sender. Build rules, formatting settings and the Apache 2.0 license are local to this repository.
+
+Windows settings retain `%APPDATA%\PresetSender\settings.json`, so moving repositories does not reset the user's configuration. The PresetMaestro application, including its own Preset Sender page, remains separate.
+
+Migration validation on 12 October 2026: a fresh local clone restored and built the Windows and macOS targets, passed all 33 simulated Windows tests and formatting verification, and published the standalone Windows EXE. The main checkout passed all 34 Windows tests with native MIDI enabled and an EXE-only test directory using a fresh extraction cache. PresetMaestro's Release build also passed after the old sender directory was removed. The macOS target was compiled on Windows; native Mac execution and the new CI jobs have not yet been run.
 
 UX decisions and verification are recorded in [ux.md](ux.md).
 

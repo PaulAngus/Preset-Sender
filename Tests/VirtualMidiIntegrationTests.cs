@@ -1,6 +1,6 @@
-#if MAESTRO_WINDOWS
+#if SENDER_WINDOWS
 using System.Threading.Channels;
-using PresetMaestro.Midi;
+using PresetSender.Midi;
 
 namespace PresetSender.Tests;
 
@@ -13,7 +13,11 @@ public sealed class VirtualMidiIntegrationTests
         var before = backend.GetInputDevices().Select(p => p.Id).ToHashSet(StringComparer.Ordinal);
         string? createdId = null;
         string? relayId = null;
-        using (var output = await Task.Run(backend.OpenVirtualOutput))
+        // Point at an EXE-only directory to validate the published bundle too.
+        string? publishedExe = Environment.GetEnvironmentVariable("PRESET_SENDER_TEST_EXE");
+        using (var output = await Task.Run(() => publishedExe is null
+            ? backend.OpenVirtualOutput()
+            : VirtualMidiHost.Open(publishedExe)))
         {
             await Until(() =>
             {

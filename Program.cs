@@ -13,7 +13,7 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
-#if MAESTRO_WINDOWS
+#if SENDER_WINDOWS
         if (args is ["--virtual-midi-host"])
         {
             // MIDI initialization runs in an MTA, without starting Avalonia.
@@ -27,7 +27,7 @@ internal static class Program
     public static AppBuilder BuildAvaloniaApp()
     {
         var builder = AppBuilder.Configure<SenderApp>();
-#if MAESTRO_WINDOWS
+#if SENDER_WINDOWS
         builder.UseWin32();
 #else
         builder.UseAvaloniaNative();
@@ -41,7 +41,7 @@ public sealed class SenderApp : Application
     public override void Initialize()
     {
         Styles.Add(new FluentTheme());
-        // Retain PresetMaestro's light/dark palette and control shape with Fluent interaction states.
+        // Use the app's light/dark palette and control shape with Fluent interaction states.
         Resources.ThemeDictionaries[ThemeVariant.Light] = Palette("#E9EDF0", "#FFFFFF", "#F4F6F8", "#CDD5DC", "#17232D");
         Resources.ThemeDictionaries[ThemeVariant.Dark] = Palette("#11151B", "#181D24", "#11161D", "#303844", "#F2F5F8");
         Styles.Add(new Style(selector => selector.OfType<Button>())

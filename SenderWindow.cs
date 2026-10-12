@@ -6,7 +6,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
-using PresetMaestro.Midi;
+using PresetSender.Midi;
 
 namespace PresetSender;
 
@@ -405,7 +405,10 @@ public sealed class SenderWindow : Window
     private void UpdateDisplay()
     {
         _display.Text = _state.Entry.PadLeft(SenderState.EntryLength, '–');
-        _send.IsEnabled = _state.TryGetProgram(out _) && (_outputPort is not null || _testSend is not null);
+        bool canSend = _state.TryGetProgram(out _) && (_outputPort is not null || _testSend is not null);
+        // Disabling a focused button loses the keypad's keyboard event route.
+        if (!canSend && _send.IsFocused) { _keyboardTarget.Focus(NavigationMethod.Tab); }
+        _send.IsEnabled = canSend;
     }
     private void CancelLearn() { _learning = null; _learn.Content = "Learn"; UpdateMappings(); }
     private void UpdateMappings() => _mappingStatus.Text = _state.Bindings.Count == 0 ? "No MIDI controls learned." : string.Join(Environment.NewLine, _state.Bindings.OrderBy(b => b.Command, StringComparer.Ordinal).Select(b => $"{b.Command}: {(b.Kind == 0x90 ? "Note" : b.Kind == 0xb0 ? "CC" : "PC")} {b.Number}, channel {b.Channel}"));

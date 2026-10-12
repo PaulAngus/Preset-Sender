@@ -138,6 +138,62 @@ public sealed class SenderTests
     }
 
     [AvaloniaTheory]
+    [InlineData(false, 460, "Light")]
+    [InlineData(true, 460, "Light")]
+    [InlineData(false, 360, "Light")]
+    [InlineData(true, 360, "Light")]
+    [InlineData(false, 460, "Dark")]
+    [InlineData(true, 460, "Dark")]
+    [InlineData(false, 360, "Dark")]
+    [InlineData(true, 360, "Dark")]
+    public void SendingFromFocusedSendButtonKeepsNextKeyboardEntryWorking(bool clickSend, int width, string theme)
+    {
+        var writes = new List<int>();
+        var window = new SenderWindow(true, writes.Add) { Width = width, RequestedThemeVariant = theme == "Light" ? ThemeVariant.Light : ThemeVariant.Dark };
+        window.Show(); Dispatcher.UIThread.RunJobs();
+        try
+        {
+            Press(Avalonia.Input.PhysicalKey.Digit4);
+            Press(Avalonia.Input.PhysicalKey.Digit2);
+            var send = window.GetVisualDescendants().OfType<Button>().First(c => c.Name == "SendProgram");
+            Assert.True(send.Focus());
+            if (clickSend)
+            {
+                var point = send.TranslatePoint(new Point(send.Bounds.Width / 2, send.Bounds.Height / 2), window)!.Value;
+                window.MouseDown(point, Avalonia.Input.MouseButton.Left);
+                window.MouseUp(point, Avalonia.Input.MouseButton.Left);
+            }
+            else { Press(Avalonia.Input.PhysicalKey.Enter); }
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(new[] { 0xc0 | (42 << 8) }, writes);
+            Assert.False(send.IsEnabled);
+            string? directory = Environment.GetEnvironmentVariable("PRESET_SENDER_SCREENSHOT_DIR");
+            if (directory is not null)
+            {
+                Directory.CreateDirectory(directory);
+                AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+                using var frame = window.CaptureRenderedFrame();
+                Assert.NotNull(frame); frame.Save(Path.Combine(directory, $"after-send-{width}-{theme}-{clickSend}.png"));
+            }
+            Press(Avalonia.Input.PhysicalKey.Digit1);
+            Press(Avalonia.Input.PhysicalKey.Digit2);
+            Press(Avalonia.Input.PhysicalKey.Digit7);
+            Assert.Equal("127", window.GetVisualDescendants().OfType<TextBlock>().First(c => c.Name == "ProgramDisplay").Text);
+            Press(Avalonia.Input.PhysicalKey.Enter);
+            Press(Avalonia.Input.PhysicalKey.Digit7);
+            Press(Avalonia.Input.PhysicalKey.Enter);
+            Assert.Equal(new[] { 0xc0 | (42 << 8), 0xc0 | (127 << 8), 0xc0 | (7 << 8) }, writes);
+
+            void Press(Avalonia.Input.PhysicalKey key)
+            {
+                window.KeyPressQwerty(key, Avalonia.Input.RawInputModifiers.None);
+                window.KeyReleaseQwerty(key, Avalonia.Input.RawInputModifiers.None);
+            }
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaTheory]
     [InlineData(460, "Light", 740)]
     [InlineData(360, "Light", 740)]
     [InlineData(460, "Dark", 740)]

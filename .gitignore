@@ -1,1 +1,11 @@
 /artifacts/
+bin/
+obj/
+packages/
+*.nupkg
+TestResults/
+.vs/
+*.user
+*.suo
+.DS_Store
+Thumbs.db

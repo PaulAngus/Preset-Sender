@@ -1,4 +1,10 @@
 <Project>
-  <Import Project="../Directory.Build.props" />
-  <Import Project="../build/DesktopPlatform.props" />
+  <PropertyGroup>
+    <AnalysisMode>Recommended</AnalysisMode>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1900</WarningsNotAsErrors>
+    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts/**;packages/**</DefaultItemExcludes>
+  </PropertyGroup>
+  <Import Project="build/DesktopPlatform.props" />
 </Project>

@@ -1,5 +1,5 @@
-using PresetMaestro.Midi;
-using PresetMaestro.Platforms;
+using PresetSender.Midi;
+using PresetSender.Platforms;
 
 namespace PresetSender;
 
@@ -19,7 +19,7 @@ internal sealed class NativeMidiBackend : ISenderMidiBackend
     public IReadOnlyList<(int Index, string Name)> GetOutputDevices() => MidiBackend.GetOutputDevices();
     public IMidiInputPort OpenInput(string id) => MidiBackend.OpenInput(id);
     public IMidiOutputPort OpenOutput(int index) => MidiBackend.OpenOutput(index);
-#if MAESTRO_WINDOWS
+#if SENDER_WINDOWS
     public bool SupportsVirtualOutput => true;
     public IMidiOutputPort OpenVirtualOutput() => VirtualMidiHost.Open();
 #else

@@ -1,0 +1,66 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Initialize Windows MIDI SDK
+        shell: pwsh
+        run: ./Initialize-MidiSdk.ps1
+      - name: Build
+        run: dotnet build PresetSender.slnx -c Release
+      - name: Regression tests (no native MIDI)
+        run: dotnet test PresetSender.slnx -c Release --no-build --logger trx --results-directory TestResults
+      - name: Verify formatting
+        run: dotnet format PresetSender.slnx --verify-no-changes --no-restore
+      - name: Publish standalone Windows executable
+        shell: pwsh
+        run: ./Publish-PresetSender.ps1
+      - name: Retain test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-test-results
+          path: TestResults/**/*.trx
+          if-no-files-found: ignore
+      - name: Retain Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: preset-sender-win-x64
+          path: artifacts/windows/
+          if-no-files-found: error
+
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build CoreMIDI backend
+        run: dotnet build PresetSender.slnx -c Release
+      - name: Regression tests (no physical MIDI)
+        run: dotnet test PresetSender.slnx -c Release --no-build --logger trx --results-directory TestResults
+      - name: Verify formatting
+        run: dotnet format PresetSender.slnx --verify-no-changes --no-restore
+      - name: Retain test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-test-results
+          path: TestResults/**/*.trx
+          if-no-files-found: ignore

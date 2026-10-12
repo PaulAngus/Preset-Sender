@@ -1,0 +1,29 @@
+<Project>
+  <!-- Choose once, before the SDK selects intermediate paths and restores packages.
+       A RID takes precedence over the build host, allowing cross-publishing. -->
+  <PropertyGroup>
+    <SenderPlatform Condition="'$(SenderPlatform)' == '' and $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win-'))">Windows</SenderPlatform>
+    <SenderPlatform Condition="'$(SenderPlatform)' == '' and $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx-'))">macOS</SenderPlatform>
+    <SenderPlatform Condition="'$(SenderPlatform)' == '' and '$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">Windows</SenderPlatform>
+    <SenderPlatform Condition="'$(SenderPlatform)' == '' and '$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('OSX'))">macOS</SenderPlatform>
+    <TargetFramework Condition="'$(SenderPlatform)' == 'Windows'">net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework Condition="'$(SenderPlatform)' == 'macOS'">net10.0</TargetFramework>
+    <TargetFramework Condition="'$(TargetFramework)' == ''">net10.0</TargetFramework>
+    <EnableWindowsTargeting Condition="'$(SenderPlatform)' == 'Windows'">true</EnableWindowsTargeting>
+    <BaseIntermediateOutputPath>obj/$(SenderPlatform)/</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin/$(SenderPlatform)/</BaseOutputPath>
+    <BaseIntermediateOutputPath Condition="'$(ArtifactsPath)' != ''">$(ArtifactsPath)/obj/$(MSBuildProjectName)/$(SenderPlatform)/</BaseIntermediateOutputPath>
+    <BaseOutputPath Condition="'$(ArtifactsPath)' != ''">$(ArtifactsPath)/bin/$(MSBuildProjectName)/$(SenderPlatform)/</BaseOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin/**;obj/**</DefaultItemExcludes>
+    <DefineConstants Condition="'$(SenderPlatform)' == 'Windows'">$(DefineConstants);SENDER_WINDOWS</DefineConstants>
+    <DefineConstants Condition="'$(SenderPlatform)' == 'macOS'">$(DefineConstants);SENDER_MACOS</DefineConstants>
+  </PropertyGroup>
+  <Target Name="ValidateDesktopPlatform" BeforeTargets="CollectPackageReferences;PrepareForBuild">
+    <Error Condition="'$(SenderPlatform)' != 'Windows' and '$(SenderPlatform)' != 'macOS'"
+           Text="Preset Sender supports Windows and macOS only. Choose win-x64, osx-arm64 or osx-x64; Linux is not a target." />
+    <Error Condition="'$(RuntimeIdentifier)' != '' and '$(RuntimeIdentifier)' != 'win-x64' and '$(RuntimeIdentifier)' != 'osx-arm64' and '$(RuntimeIdentifier)' != 'osx-x64'"
+           Text="Unsupported Preset Sender runtime '$(RuntimeIdentifier)'. Choose win-x64, osx-arm64 or osx-x64." />
+    <Error Condition="('$(SenderPlatform)' == 'Windows' and $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx-'))) or ('$(SenderPlatform)' == 'macOS' and $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win-')))"
+           Text="SenderPlatform and RuntimeIdentifier must select the same operating system." />
+  </Target>
+</Project>

@@ -1,7 +1,7 @@
-#if MAESTRO_WINDOWS
+#if SENDER_WINDOWS
 using System.Diagnostics;
 using System.Globalization;
-using PresetMaestro.Midi;
+using PresetSender.Midi;
 
 namespace PresetSender;
 
@@ -14,9 +14,13 @@ internal sealed class VirtualMidiHost : IMidiOutputPort
 
     private VirtualMidiHost(Process process) => _process = process;
 
-    public static VirtualMidiHost Open()
+    public static VirtualMidiHost Open(string? executablePath = null)
     {
-        var start = new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "PresetSender.exe"))
+        // Full bundle extraction makes BaseDirectory the cache, not the EXE's folder.
+        executablePath ??= System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name == "PresetSender"
+            ? Environment.ProcessPath
+            : Path.Combine(AppContext.BaseDirectory, "PresetSender.exe");
+        var start = new ProcessStartInfo(executablePath ?? throw new IOException("Could not locate Preset Sender's executable."))
         {
             UseShellExecute = false,
             CreateNoWindow = true,

@@ -1,5 +1,13 @@
 # Preset Sender UX
 
+## Keyboard focus after sending — 12 October 2026
+
+The focused Send button became disabled when successful sending cleared entry, leaving subsequent keyboard digits outside the keypad's event route. Before disabling a focused Send button, focus now moves to the existing Digit 0 button with a visible keyboard focus indicator. This also handles clearing or invalidating entry while Send is focused. Focus in configuration controls remains untouched.
+
+Consulted current [Fluent 2 accessibility guidance](https://fluent2.microsoft.design/accessibility) on managing visible focus and [Windows keyboard accessibility guidance](https://learn.microsoft.com/en-us/windows/apps/design/accessibility/keyboard-accessibility) on focus traversal and disabled controls. Moving to Digit 0 is a product choice using the existing Avalonia keypad and Fluent focus styling, with no change to layout or tab order.
+
+Regression checks reproduced lost input before the fix, then verified sending 42, 127, and 7 consecutively after mouse-click and Enter activation of focused Send. Eight variants cover light/dark themes at 460 and 360 pixels. Post-send rendered frames were inspected at both widths in both themes: entry is cleared, Send is disabled, and the Digit 0 focus indicator remains visible. All 33 simulated checks and formatting verification pass; the native MIDI check remains opt-in because MIDI transport is unchanged.
+
 ## Virtual output and channel broadcast — 11 October 2026
 
 Guidance consulted before changing the controls:
