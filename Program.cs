@@ -13,6 +13,24 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        if (args.Contains("--midi-backend", StringComparer.Ordinal))
+        {
+#if SENDER_WINDOWS
+            Console.WriteLine(MightBeUseful.Midi.Windows.WindowsMidiBackend.Capabilities.Description);
+#else
+            Console.WriteLine("CoreMIDI MIDI 1.0 (MightBeUseful.Midi.CoreMidi).");
+#endif
+            return;
+        }
+        if (args.Contains("--list-ports", StringComparer.Ordinal))
+        {
+#if SENDER_WINDOWS
+            MightBeUseful.Midi.Windows.WindowsMidiBackend.Print(Console.Out);
+#else
+            MightBeUseful.Midi.CoreMidi.CoreMidiPortCatalog.Print(Console.Out);
+#endif
+            return;
+        }
 #if SENDER_WINDOWS
         if (args is ["--virtual-midi-host"])
         {

@@ -9,3 +9,6 @@ TestResults/
 *.suo
 .DS_Store
 Thumbs.db
+
+# Pinned first-party MIDI packages keep this checkout independently buildable.
+!dependencies/midi/*.nupkg

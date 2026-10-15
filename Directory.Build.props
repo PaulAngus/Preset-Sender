@@ -7,4 +7,6 @@
     <DefaultItemExcludes>$(DefaultItemExcludes);artifacts/**;packages/**</DefaultItemExcludes>
   </PropertyGroup>
   <Import Project="build/DesktopPlatform.props" />
+  <ItemGroup><Using Include="MightBeUseful.Midi" /></ItemGroup>
+  <Import Project="dependencies/midi/MidiVersion.props" />
 </Project>

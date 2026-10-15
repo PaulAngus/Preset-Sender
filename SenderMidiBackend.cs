@@ -1,4 +1,4 @@
-using PresetSender.Midi;
+using MightBeUseful.Midi;
 using PresetSender.Platforms;
 
 namespace PresetSender;
@@ -20,8 +20,15 @@ internal sealed class NativeMidiBackend : ISenderMidiBackend
     public IMidiInputPort OpenInput(string id) => MidiBackend.OpenInput(id);
     public IMidiOutputPort OpenOutput(int index) => MidiBackend.OpenOutput(index);
 #if SENDER_WINDOWS
-    public bool SupportsVirtualOutput => true;
-    public IMidiOutputPort OpenVirtualOutput() => VirtualMidiHost.Open();
+    public bool SupportsVirtualOutput => MightBeUseful.Midi.Windows.WindowsMidiBackend.Capabilities.CanCreateVirtualPorts;
+    public IMidiOutputPort OpenVirtualOutput()
+    {
+        if (!SupportsVirtualOutput)
+        {
+            throw new PlatformNotSupportedException("Use an existing hardware or loopback MIDI output on this version of Windows.");
+        }
+        return VirtualMidiHost.Open();
+    }
 #else
     public bool SupportsVirtualOutput => false;
     public IMidiOutputPort OpenVirtualOutput() => throw new PlatformNotSupportedException("Built-in virtual output currently requires Windows MIDI Services.");

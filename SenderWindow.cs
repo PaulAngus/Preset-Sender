@@ -6,7 +6,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
-using PresetSender.Midi;
+using MightBeUseful.Midi;
 
 namespace PresetSender;
 

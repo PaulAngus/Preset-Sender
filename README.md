@@ -1,5 +1,7 @@
 # Preset Sender
 
+Shared MIDI implementation: see [dependency and setup notes](dependencies/midi/README.md). Current and legacy backends come from the `MightBeUseful.Midi` packages maintained in [MIDIHelperLibrary](https://github.com/PaulAngus/MIDIHelperLibrary); earlier implementation/package details below describe the pre-migration builds.
+
 A compact MIDI Program Change utility with its own settings, tests, branding and releases. This repository builds independently: its Windows and macOS MIDI backends, message encoder and platform configuration are included here. PresetMaestro is not required. The application remains named **Preset Sender**, although its repository is named **Preset-Forwarder**.
 
 ## Use

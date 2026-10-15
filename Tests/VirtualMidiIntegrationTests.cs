@@ -1,6 +1,6 @@
 #if SENDER_WINDOWS
 using System.Threading.Channels;
-using PresetSender.Midi;
+using MightBeUseful.Midi;
 
 namespace PresetSender.Tests;
 
@@ -10,7 +10,7 @@ public sealed class VirtualMidiIntegrationTests
     public async Task PublishedDeviceDeliversEveryChannelToTwoLegacyReceiversAndDisappearsOnClose()
     {
         var backend = new NativeMidiBackend();
-        var before = backend.GetInputDevices().Select(p => p.Id).ToHashSet(StringComparer.Ordinal);
+        var before = MightBeUseful.Midi.Windows.WindowsLegacyMidiBackend.GetInputDevices().Select(p => p.Id).ToHashSet(StringComparer.Ordinal);
         string? createdId = null;
         string? relayId = null;
         // Point at an EXE-only directory to validate the published bundle too.
@@ -21,13 +21,14 @@ public sealed class VirtualMidiIntegrationTests
         {
             await Until(() =>
             {
-                var ports = backend.GetInputDevices();
+                var ports = MightBeUseful.Midi.Windows.WindowsLegacyMidiBackend.GetInputDevices();
                 createdId = ports.FirstOrDefault(p => !before.Contains(p.Id) && p.Name == "Preset Sender").Id;
                 relayId = ports.FirstOrDefault(p => !before.Contains(p.Id) && p.Name == "Preset Sender (Relay)").Id;
-                return createdId is not null && relayId is not null;
+                return createdId is not null;
             });
-            using var input = backend.OpenInput(createdId!);
-            using var secondInput = backend.OpenInput(createdId!);
+            Assert.Null(relayId); // The shared publisher exposes exactly one public legacy port.
+            using var input = MightBeUseful.Midi.Windows.WindowsLegacyMidiBackend.OpenInput(createdId!);
+            using var secondInput = MightBeUseful.Midi.Windows.WindowsLegacyMidiBackend.OpenInput(createdId!);
             var received = Channel.CreateUnbounded<int>();
             var secondReceived = Channel.CreateUnbounded<int>();
             input.MessageReceived += (_, e) => received.Writer.TryWrite(e.RawMessage);
@@ -51,7 +52,7 @@ public sealed class VirtualMidiIntegrationTests
             input.Stop();
             secondInput.Stop();
         }
-        await Until(() => backend.GetInputDevices().All(p => p.Id != createdId && p.Id != relayId));
+        await Until(() => MightBeUseful.Midi.Windows.WindowsLegacyMidiBackend.GetInputDevices().All(p => p.Id != createdId && p.Id != relayId));
     }
 
     private static async Task Until(Func<bool> predicate)

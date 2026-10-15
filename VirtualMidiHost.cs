@@ -1,7 +1,7 @@
 #if SENDER_WINDOWS
 using System.Diagnostics;
 using System.Globalization;
-using PresetSender.Midi;
+using MightBeUseful.Midi;
 
 namespace PresetSender;
 
