@@ -18,6 +18,17 @@ public sealed class TestApplication
 public sealed class SenderTests
 {
     [Fact]
+    public void ForwardingSettingMigratesAndExplicitNewValueWins()
+    {
+        Assert.False(SenderSettings.FromJson("{}").ForwardMidi);
+        Assert.True(SenderSettings.FromJson("""{"ForwardProgramChanges":true}""").ForwardMidi);
+        Assert.False(SenderSettings.FromJson("""{"ForwardProgramChanges":true,"ForwardMidi":false}""").ForwardMidi);
+        var settings = SenderSettings.FromJson("""{"ForwardMidi":true}""");
+        string json = System.Text.Json.JsonSerializer.Serialize(settings);
+        Assert.DoesNotContain("ForwardProgramChanges", json); Assert.True(SenderSettings.FromJson(json).ForwardMidi);
+    }
+
+    [Fact]
     public void SettingsRetainAllChannelsAndDistinguishLegacyHardwareFromVirtualChoice()
     {
         var legacy = SenderSettings.FromJson("""{"OutputName":"USB MIDI","OutputChannel":6}""");
@@ -92,12 +103,10 @@ public sealed class SenderTests
     }
 
     [Fact]
-    public void IncomingProgramChangeRequiresOptInAndOtherMessagesAreIgnored()
+    public void IncomingProgramChangesOnlyResolveLearnedCommandsInEntryState()
     {
         var state = new SenderState();
         Assert.Null(state.Receive(0xc5 | (42 << 8), out _));
-        state.ForwardProgramChanges = true;
-        Assert.Equal("PC:42", state.Receive(0xc5 | (42 << 8), out _));
         Assert.Null(state.Receive(0xe0 | (50 << 8) | (100 << 16), out _));
         state.Bindings.Add(new(0xc0, 6, 42, "4"));
         Assert.Equal("4", state.Receive(0xc5 | (42 << 8), out var pressed));
@@ -119,7 +128,7 @@ public sealed class SenderTests
             Assert.Empty(writes);
             window.KeyPressQwerty(Avalonia.Input.PhysicalKey.Enter, Avalonia.Input.RawInputModifiers.None); window.KeyReleaseQwerty(Avalonia.Input.PhysicalKey.Enter, Avalonia.Input.RawInputModifiers.None);
             Assert.Equal(new[] { 0xc0 | (42 << 8) }, writes);
-            Assert.Equal("–––", window.GetVisualDescendants().OfType<TextBlock>().First(c => c.Name == "ProgramDisplay").Text);
+            Assert.Equal("042", window.GetVisualDescendants().OfType<TextBlock>().First(c => c.Name == "ProgramDisplay").Text);
             foreach (var key in new[] { Avalonia.Input.PhysicalKey.Digit1, Avalonia.Input.PhysicalKey.Digit2, Avalonia.Input.PhysicalKey.Digit7 })
             {
                 window.KeyPressQwerty(key, Avalonia.Input.RawInputModifiers.None);
@@ -130,9 +139,12 @@ public sealed class SenderTests
             window.KeyPressQwerty(Avalonia.Input.PhysicalKey.Enter, Avalonia.Input.RawInputModifiers.None);
             window.KeyReleaseQwerty(Avalonia.Input.PhysicalKey.Enter, Avalonia.Input.RawInputModifiers.None);
             Assert.Equal(0xc0 | (127 << 8), writes[1]);
-            window.GetVisualDescendants().OfType<ComboBox>().First(c => c.Name == "MidiOutput").Focus();
-            window.KeyPressQwerty(Avalonia.Input.PhysicalKey.Digit7, Avalonia.Input.RawInputModifiers.None); window.KeyReleaseQwerty(Avalonia.Input.PhysicalKey.Digit7, Avalonia.Input.RawInputModifiers.None);
-            Assert.Equal("–––", window.GetVisualDescendants().OfType<TextBlock>().First(c => c.Name == "ProgramDisplay").Text);
+            window.GetVisualDescendants().OfType<Button>().Single(c => c.Name == "OpenConfiguration").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); Dispatcher.UIThread.RunJobs();
+            var configuration = window.OwnedWindows.Single();
+            configuration.GetVisualDescendants().OfType<ComboBox>().First(c => c.Name == "MidiOutput").Focus();
+            configuration.KeyPressQwerty(Avalonia.Input.PhysicalKey.Digit7, Avalonia.Input.RawInputModifiers.None); configuration.KeyReleaseQwerty(Avalonia.Input.PhysicalKey.Digit7, Avalonia.Input.RawInputModifiers.None);
+            Assert.Equal("127", window.GetVisualDescendants().OfType<TextBlock>().First(c => c.Name == "ProgramDisplay").Text);
+            Assert.Equal(2, writes.Count);
         }
         finally { window.Close(); }
     }
@@ -166,7 +178,7 @@ public sealed class SenderTests
             else { Press(Avalonia.Input.PhysicalKey.Enter); }
             Dispatcher.UIThread.RunJobs();
             Assert.Equal(new[] { 0xc0 | (42 << 8) }, writes);
-            Assert.False(send.IsEnabled);
+            Assert.True(send.IsEnabled);
             string? directory = Environment.GetEnvironmentVariable("PRESET_SENDER_SCREENSHOT_DIR");
             if (directory is not null)
             {
@@ -200,7 +212,7 @@ public sealed class SenderTests
     [InlineData(360, "Dark", 740)]
     [InlineData(360, "Light", 520)]
     [InlineData(360, "Dark", 520)]
-    public void RenderSenderAndExpandedControls(int width, string theme, int height)
+    public void RenderSenderAndConfiguration(int width, string theme, int height)
     {
         var window = new SenderWindow(true, null) { Width = width, Height = height, RequestedThemeVariant = theme == "Light" ? ThemeVariant.Light : ThemeVariant.Dark };
         window.Show(); Dispatcher.UIThread.RunJobs();
@@ -214,21 +226,24 @@ public sealed class SenderTests
 
             Directory.CreateDirectory(directory);
             Save("sender");
-            foreach (var expander in window.GetVisualDescendants().OfType<Expander>()) { expander.IsExpanded = true; }
+            var senderScroll = window.GetVisualDescendants().OfType<ScrollViewer>().First(); senderScroll.Offset = new Vector(0, senderScroll.Extent.Height); Dispatcher.UIThread.RunJobs(); Save("sender-bottom");
+            window.GetVisualDescendants().OfType<Button>().Single(c => c.Name == "OpenConfiguration").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); Dispatcher.UIThread.RunJobs();
+            var configuration = window.OwnedWindows.Single(); configuration.Width = width == 360 ? 360 : 560; configuration.Height = height == 520 ? 440 : 740; Dispatcher.UIThread.RunJobs();
+            Save("configuration", configuration);
             Dispatcher.UIThread.RunJobs();
-            var viewer = window.GetVisualDescendants().OfType<ScrollViewer>().First();
+            var viewer = configuration.GetVisualDescendants().OfType<ScrollViewer>().First();
             viewer.Offset = new Vector(0, viewer.Extent.Height);
             Dispatcher.UIThread.RunJobs();
-            Save("controls");
-            foreach (var expander in window.GetVisualDescendants().OfType<Expander>()) { expander.IsExpanded = Equals(expander.Header, "Program options"); }
+            Save("controls", configuration);
             Dispatcher.UIThread.RunJobs();
             viewer.Offset = new Vector(0, viewer.Extent.Height);
             Dispatcher.UIThread.RunJobs();
-            Save("options");
+            Save("options", configuration);
 
-            void Save(string view)
+            void Save(string view, Window? surface = null)
             {
-                using var frame = window.CaptureRenderedFrame();
+                AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+                using var frame = (surface ?? window).CaptureRenderedFrame();
                 Assert.NotNull(frame); frame.Save(Path.Combine(directory, $"{view}-{width}-{height}-{theme}.png"));
             }
         }

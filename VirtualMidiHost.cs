@@ -63,7 +63,7 @@ internal sealed class VirtualMidiHost : IMidiOutputPort
         }
     }
 
-    public void SendBuffer(byte[] frame) => throw new NotSupportedException("Preset Sender sends only Program Change messages.");
+    public void SendBuffer(byte[] frame) => throw new NotSupportedException("Preset Sender does not forward SysEx.");
 
     public void Dispose()
     {

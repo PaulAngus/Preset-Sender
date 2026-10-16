@@ -1,6 +1,6 @@
 # Preset Sender logo options
 
-Six original raster concept marks. The user selected **option 1, DIN Send**, for the website, app header, and executable icon. Its production exports are under `../Website/` and `../../Assets/`; the other options are retained as reference concepts.
+Six original raster concept marks. The user originally selected **option 1, DIN Send**, then reassigned it to MIDI Forwarder on 14 October 2026. Preset Sender now uses **Amber Gradient**, selected from [the pedal gradient revisions](../NewOptions/PedalGradients/README.md). These six earlier concepts are retained as references; they are not the current app/website production assets.
 
 1. **DIN Send** — socket with a sending arrow; compact option for the executable icon.
 2. **Preset Stack** — preset cards and a MIDI socket.

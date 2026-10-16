@@ -3,7 +3,7 @@ param()
 
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
-$taskSourcePath = Join-Path $PSScriptRoot 'Options/option-1-din-send.png'
+$taskSourcePath = Join-Path $PSScriptRoot 'NewOptions/PedalGradients/pedal-1-amber-gradient.png'
 $taskAppAssets = Join-Path $PSScriptRoot '../Assets'
 $taskWebsiteAssets = Join-Path $PSScriptRoot 'Website'
 New-Item -ItemType Directory -Path $taskAppAssets, $taskWebsiteAssets -Force | Out-Null

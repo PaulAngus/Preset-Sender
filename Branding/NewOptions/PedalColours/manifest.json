@@ -1,0 +1,67 @@
+[
+  {
+    "n": 1,
+    "slug": "amber-charcoal",
+    "name": "Amber / charcoal",
+    "face": "#F4B544",
+    "arrow": "#23282F",
+    "outline": "#23282F",
+    "switch": "#FFF5DF",
+    "note": "Warm amber face, charcoal arrow and outline, warm ivory centre of footswitch. Avoid red so it is distinct from Maestro's red/orange pick.",
+    "prompt": "Use case: logo-brand colour edit.\nImage 1: edit target, the selected Pedal Send logo concept for Preset Sender / Preset Forwarder.\nPrimary request: recolour this exact existing logo, change colours only. Warm amber face, charcoal arrow and outline, warm ivory centre of footswitch. Avoid red so it is distinct from Maestro's red/orange pick.\nInvariants: preserve the upright pedal silhouette, dimensions, proportions, generous transparent margin, rounded rectangular casing, side tabs, right-facing arrow shape and placement, single circular footswitch ring and placement, and all existing shapes. No new knobs, LEDs, hardware, text, tile or symbols. No perspective or geometry changes.\nStyle: crisp clean flat solid fills using the specified hex colours, high contrast between the pedal body and forwarding arrow. Remove subtle gradients and tonal texture from the input. Transparent background, no shadow, watermark, lettering or mockup. One square transparent PNG logo only.",
+    "source": "C:\\Users\\paulg\\.codex\\generated_images\\01a13a2c-267a-7c01-83a1-0582847181ff\\exec-e6906bbd-5eb0-45cd-b53f-88183ddbd1c9.png",
+    "filename": "pedal-1-amber-charcoal.png"
+  },
+  {
+    "n": 2,
+    "slug": "coral-ivory",
+    "name": "Coral / ivory",
+    "face": "#D94C57",
+    "arrow": "#FFF7EC",
+    "outline": "#34303B",
+    "switch": "#FFF7EC",
+    "note": "Rich warm coral-red face, warm ivory arrow, graphite outline and footswitch ring, warm ivory footswitch centre.",
+    "prompt": "Use case: logo-brand colour edit.\nImage 1: edit target, the selected Pedal Send logo concept for Preset Sender / Preset Forwarder.\nPrimary request: recolour this exact existing logo, change colours only. Rich warm coral-red face, warm ivory arrow, graphite outline and footswitch ring, warm ivory footswitch centre.\nInvariants: preserve the upright pedal silhouette, dimensions, proportions, generous transparent margin, rounded rectangular casing, side tabs, right-facing arrow shape and placement, single circular footswitch ring and placement, and all existing shapes. No new knobs, LEDs, hardware, text, tile or symbols. No perspective or geometry changes.\nStyle: crisp clean flat solid fills using the specified hex colours, high contrast between the pedal body and forwarding arrow. Remove subtle gradients and tonal texture from the input. Transparent background, no shadow, watermark, lettering or mockup. One square transparent PNG logo only.",
+    "source": "C:\\Users\\paulg\\.codex\\generated_images\\01a13a2c-267a-7c01-83a1-0582847181ff\\exec-6952cc74-9f50-4971-b431-ae069e66a908.png",
+    "filename": "pedal-2-coral-ivory.png"
+  },
+  {
+    "n": 3,
+    "slug": "teal-ivory",
+    "name": "Teal / ivory",
+    "face": "#087E83",
+    "arrow": "#FFF7EC",
+    "outline": "#25343B",
+    "switch": "#FFF7EC",
+    "note": "Deep vivid teal face, warm ivory arrow, charcoal outline and footswitch ring, warm ivory footswitch centre.",
+    "prompt": "Use case: logo-brand colour edit.\nImage 1: edit target, the selected Pedal Send logo concept for Preset Sender / Preset Forwarder.\nPrimary request: recolour this exact existing logo, change colours only. Deep vivid teal face, warm ivory arrow, charcoal outline and footswitch ring, warm ivory footswitch centre.\nInvariants: preserve the upright pedal silhouette, dimensions, proportions, generous transparent margin, rounded rectangular casing, side tabs, right-facing arrow shape and placement, single circular footswitch ring and placement, and all existing shapes. No new knobs, LEDs, hardware, text, tile or symbols. No perspective or geometry changes.\nStyle: crisp clean flat solid fills using the specified hex colours, high contrast between the pedal body and forwarding arrow. Remove subtle gradients and tonal texture from the input. Transparent background, no shadow, watermark, lettering or mockup. One square transparent PNG logo only.",
+    "source": "C:\\Users\\paulg\\.codex\\generated_images\\01a13a2c-267a-7c01-83a1-0582847181ff\\exec-34d0b465-4518-427d-aa7f-b91abda5b3ce.png",
+    "filename": "pedal-3-teal-ivory.png"
+  },
+  {
+    "n": 4,
+    "slug": "plum-amber",
+    "name": "Plum / amber",
+    "face": "#673F83",
+    "arrow": "#FFD37D",
+    "outline": "#2B2235",
+    "switch": "#FFF4E4",
+    "note": "Rich plum-purple face, light golden amber arrow, charcoal-purple outline and footswitch ring, warm ivory footswitch centre.",
+    "prompt": "Use case: logo-brand colour edit.\nImage 1: edit target, the selected Pedal Send logo concept for Preset Sender / Preset Forwarder.\nPrimary request: recolour this exact existing logo, change colours only. Rich plum-purple face, light golden amber arrow, charcoal-purple outline and footswitch ring, warm ivory footswitch centre.\nInvariants: preserve the upright pedal silhouette, dimensions, proportions, generous transparent margin, rounded rectangular casing, side tabs, right-facing arrow shape and placement, single circular footswitch ring and placement, and all existing shapes. No new knobs, LEDs, hardware, text, tile or symbols. No perspective or geometry changes.\nStyle: crisp clean flat solid fills using the specified hex colours, high contrast between the pedal body and forwarding arrow. Remove subtle gradients and tonal texture from the input. Transparent background, no shadow, watermark, lettering or mockup. One square transparent PNG logo only.",
+    "source": "C:\\Users\\paulg\\.codex\\generated_images\\01a13a2c-267a-7c01-83a1-0582847181ff\\exec-0eaec09a-a81f-4112-af6c-2923c9708c56.png",
+    "filename": "pedal-4-plum-amber.png"
+  },
+  {
+    "n": 5,
+    "slug": "cobalt-ivory",
+    "name": "Cobalt / ivory",
+    "face": "#2463D4",
+    "arrow": "#FFF9EF",
+    "outline": "#28313E",
+    "switch": "#FFF9EF",
+    "note": "Cobalt face, warm ivory arrow, neutral graphite outline and footswitch ring, warm ivory footswitch centre. Do not use a dark blue arrow or dark blue outline.",
+    "prompt": "Use case: logo-brand colour edit.\nImage 1: edit target, the selected Pedal Send logo concept for Preset Sender / Preset Forwarder.\nPrimary request: recolour this exact existing logo, change colours only. Cobalt face, warm ivory arrow, neutral graphite outline and footswitch ring, warm ivory footswitch centre. Do not use a dark blue arrow or dark blue outline.\nInvariants: preserve the upright pedal silhouette, dimensions, proportions, generous transparent margin, rounded rectangular casing, side tabs, right-facing arrow shape and placement, single circular footswitch ring and placement, and all existing shapes. No new knobs, LEDs, hardware, text, tile or symbols. No perspective or geometry changes.\nStyle: crisp clean flat solid fills using the specified hex colours, high contrast between the pedal body and forwarding arrow. Remove subtle gradients and tonal texture from the input. Transparent background, no shadow, watermark, lettering or mockup. One square transparent PNG logo only.",
+    "source": "C:\\Users\\paulg\\.codex\\generated_images\\01a13a2c-267a-7c01-83a1-0582847181ff\\exec-7b1fdcf0-e449-4295-ba07-c08ad1f13886.png",
+    "filename": "pedal-5-cobalt-ivory.png"
+  }
+]

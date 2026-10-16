@@ -10,17 +10,19 @@ public sealed class SenderState
     public int NumberingOffset { get; set; }
     public int OutputChannel { get; set; } = 1;
     public int InputChannel { get; set; }
-    public bool ForwardProgramChanges { get; set; }
     public string Entry { get; private set; } = "";
     public int? LastProgram { get; private set; }
+    public int? PreviousProgram { get; private set; }
     public List<MidiBinding> Bindings { get; } = [];
     private readonly HashSet<(int Kind, int Channel, int Number)> _held = [];
 
-    public bool Digit(int digit)
+    public bool Digit(int digit, int entryLength = EntryLength)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(digit);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(digit, 9);
-        if (Entry.Length >= EntryLength)
+        ArgumentOutOfRangeException.ThrowIfLessThan(entryLength, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(entryLength, 4);
+        if (Entry.Length >= entryLength)
         {
             return false;
         }
@@ -51,8 +53,8 @@ public sealed class SenderState
         return program is >= 0 and <= 127;
     }
 
-    public void Sent(int program) { LastProgram = program; Clear(); }
-    public string Display(int program) => (program + NumberingOffset).ToString("D3", CultureInfo.InvariantCulture);
+    public void Sent(int program) { PreviousProgram = LastProgram; LastProgram = program; Clear(); }
+    public string Display(int program, int digits = EntryLength) => (program + NumberingOffset).ToString("D" + digits, CultureInfo.InvariantCulture);
 
     public string? Receive(int message, out MidiBinding? pressed)
     {
@@ -67,8 +69,7 @@ public sealed class SenderState
         if (kind == 0xc0)
         {
             pressed = new(kind, channel, number, "");
-            return Bindings.FirstOrDefault(binding => binding.Kind == kind && binding.Channel == channel && binding.Number == number)?.Command
-                ?? (ForwardProgramChanges ? $"PC:{number}" : null);
+            return Bindings.FirstOrDefault(binding => binding.Kind == kind && binding.Channel == channel && binding.Number == number)?.Command;
         }
 
         if (kind is not (0x80 or 0x90 or 0xb0))

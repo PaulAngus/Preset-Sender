@@ -81,7 +81,10 @@ public sealed class SenderApp : Application
         ["SenderSurface"] = SolidColorBrush.Parse(surface),
         ["SenderInset"] = SolidColorBrush.Parse(inset),
         ["SenderBorder"] = SolidColorBrush.Parse(border),
-        ["SenderText"] = SolidColorBrush.Parse(text)
+        ["SenderText"] = SolidColorBrush.Parse(text),
+        ["SenderAccent"] = SolidColorBrush.Parse(background == "#11151B" ? "#2F80ED" : "#1969B0"),
+        ["SenderSecondary"] = SolidColorBrush.Parse(background == "#11151B" ? "#A7B0BC" : "#5F6B75"),
+        ["SenderDanger"] = SolidColorBrush.Parse(background == "#11151B" ? "#EC6C68" : "#C84444")
     };
 
     public override void OnFrameworkInitializationCompleted()

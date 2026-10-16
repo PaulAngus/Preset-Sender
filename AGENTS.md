@@ -2,6 +2,8 @@
 
 ## UI and UX changes
 
+- Keep settings sections visible in ordinary labelled sections or cards. Do not hide forms, groups of controls, explanatory text or additional settings inside expanders, accordions or collapsible panels such as "Additional options", unless the user explicitly requests that layout.
+- Reserve dropdowns/ComboBoxes for choosing one value from a list, such as a MIDI port, channel, numbering scheme or command. Do not use them as containers for multiple settings or actions.
 - For new or substantially changed UI elements and interactions, consult current official Microsoft Fluent 2 and Windows app design guidance for the relevant pattern before implementing. Do not require the user to request this research each time.
 - Apply the guidance to Avalonia using the application's existing theme and controls. Distinguish documented requirements from product choices, and record relevant primary-source links and any deliberate deviations in the applicable UX document.
 - Keep dismissal controls separate from task actions. For a details pane, put a clearly labelled close control at the trailing edge of its header, keep it reachable while scrolling, support keyboard dismissal, and return focus to the originating content.

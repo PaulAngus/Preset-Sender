@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
@@ -14,48 +15,149 @@ public sealed class MidiRoutingTests
     {
         var midi = new FakeMidi { SupportsVirtualOutput = true };
         var window = new SenderWindow(true, null, midi);
-        window.Show();
+        window.Show(); OpenConfiguration(window);
         try
         {
             await WaitUntil(() => Find<ComboBox>(window, "MidiOutput").ItemCount == 2);
             Click(Find<Button>(window, "ConnectMidi"));
-            await WaitUntil(() => Equals(Find<Button>(window, "ConnectMidi").Content, "Disconnect"));
+            await WaitUntil(() => Find<Button>(window, "DisconnectMidi").IsEnabled);
             Assert.True(midi.OpenedVirtual);
             Assert.Empty(midi.Output.Messages);
-            foreach (var expander in window.GetVisualDescendants().OfType<Expander>()) { expander.IsExpanded = true; }
             Dispatcher.UIThread.RunJobs();
             Find<ComboBox>(window, "OutputChannel").SelectedIndex = 0;
             window.Execute("4"); window.Execute("2"); window.Execute("Send");
             Assert.Equal(Enumerable.Range(0, 16).Select(channel => 0xc0 | channel | (42 << 8)), midi.Output.Messages);
-            Assert.Equal("–––", Find<TextBlock>(window, "ProgramDisplay").Text);
-            Click(Find<Button>(window, "ConnectMidi"));
+            Assert.Equal("042", Find<TextBlock>(window, "ProgramDisplay").Text);
+            Click(Find<Button>(window, "DisconnectMidi"));
             Assert.True(midi.Output.Disposed);
         }
         finally { window.Close(); }
     }
 
     [AvaloniaFact]
-    public async Task ForwardedProgramChangesUseAllChannelsAndInputFilter()
+    public async Task ForwardedMidiKeepsOriginalChannelsAndPendingEntry()
     {
         var midi = new FakeMidi { SupportsVirtualOutput = true };
         var window = new SenderWindow(true, null, midi);
-        window.Show();
+        window.Show(); OpenConfiguration(window);
         try
         {
             await WaitUntil(() => Find<ComboBox>(window, "MidiOutput").ItemCount == 2);
             Find<ComboBox>(window, "MidiInput").SelectedIndex = 1;
             Click(Find<Button>(window, "ConnectMidi"));
             await WaitUntil(() => midi.Input.Started);
-            foreach (var expander in window.GetVisualDescendants().OfType<Expander>()) { expander.IsExpanded = true; }
             Dispatcher.UIThread.RunJobs();
             Find<ComboBox>(window, "OutputChannel").SelectedIndex = 0;
-            window.GetVisualDescendants().OfType<CheckBox>().Single().IsChecked = true;
-            var inputChannel = window.GetVisualDescendants().OfType<ComboBox>().Single(c => c.ItemCount == 17 && !Equals(c.Items[0], "All channels"));
+            Find<CheckBox>(window, "ForwardMidi").IsChecked = true;
+            var inputChannel = Find<ComboBox>(window, "InputChannel");
             inputChannel.SelectedIndex = 3;
+            window.Execute("4"); window.Execute("2");
             midi.Input.Emit(0xc1 | (127 << 8)); Dispatcher.UIThread.RunJobs();
-            Assert.Empty(midi.Output.Messages);
             midi.Input.Emit(0xc2 | (127 << 8)); Dispatcher.UIThread.RunJobs();
-            Assert.Equal(Enumerable.Range(0, 16).Select(channel => 0xc0 | channel | (127 << 8)), midi.Output.Messages);
+            Assert.Equal(new[] { 0xc1 | (127 << 8), 0xc2 | (127 << 8) }, midi.Output.Messages);
+            Assert.Equal("042", Find<TextBlock>(window, "ProgramDisplay").Text);
+            window.Execute("Last"); Assert.Equal(2, midi.Output.Messages.Count);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public async Task ForwardingPassesChannelMessagesAndDropsSystemMessagesAndSysEx()
+    {
+        var midi = new FakeMidi(); var window = new SenderWindow(true, null, midi);
+        window.Show(); OpenConfiguration(window);
+        try
+        {
+            await WaitUntil(() => Find<ComboBox>(window, "MidiOutput").ItemCount == 1);
+            Find<ComboBox>(window, "MidiInput").SelectedIndex = 1;
+            Click(Find<Button>(window, "ConnectMidi")); await WaitUntil(() => midi.Input.Started);
+            int[] messages = [0x92 | (60 << 8) | (100 << 16), 0xb2, 0xb2 | (32 << 8) | (3 << 16),
+                0xa2 | (60 << 8) | (80 << 16), 0xd2 | (90 << 8), 0xe2 | (127 << 8) | (64 << 16), 0xc2 | (42 << 8),
+                0x82 | (60 << 8) | (40 << 16), 0x9f | (80 << 8)];
+            foreach (int raw in messages) { midi.Input.Emit(raw); }
+            Dispatcher.UIThread.RunJobs(); Assert.Empty(midi.Output.Messages);
+            Find<CheckBox>(window, "ForwardMidi").IsChecked = true;
+            Find<ComboBox>(window, "InputChannel").SelectedIndex = 1;
+            foreach (int raw in messages) { midi.Input.Emit(raw); }
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(messages, midi.Output.Messages);
+            foreach (int raw in new[] { 0xf0, 0xf1, 0xf2, 0xf3, 0xf6, 0xf7, 0xf8, 0xfa, 0xfb, 0xfc, 0xfe, 0xff }) { midi.Input.Emit(raw); }
+            midi.Input.EmitSysEx([0xf0, 0x7d, 0x01, 0xf7]); Dispatcher.UIThread.RunJobs(); Assert.Equal(messages, midi.Output.Messages); Assert.False(midi.Output.Disposed);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public async Task EntryAndLearnedControlsConsumePressesRepeatsReleasesAndPressure()
+    {
+        var midi = new FakeMidi();
+        var settings = new SenderSettings { ForwardMidi = true, Bindings = [new(0x90, 1, 60, "4"), new(0xb0, 1, 20, "Clear"), new(0xc0, 1, 70, "Send")] };
+        var window = new SenderWindow(true, null, midi, settings); window.Show(); OpenConfiguration(window);
+        try
+        {
+            await WaitUntil(() => Find<ComboBox>(window, "MidiOutput").ItemCount == 1);
+            Find<ComboBox>(window, "MidiInput").SelectedIndex = 1; Click(Find<Button>(window, "ConnectMidi")); await WaitUntil(() => midi.Input.Started);
+            Emit(0x90 | (36 << 8) | (100 << 16)); Emit(0x90 | (36 << 8) | (100 << 16));
+            Assert.Equal("011", Find<TextBlock>(window, "ProgramDisplay").Text);
+            Emit(0xa0 | (36 << 8) | (80 << 16)); Emit(0x80 | (36 << 8)); Emit(0x90 | (36 << 8));
+            window.Execute("Clear"); Emit(0x90 | (60 << 8) | (100 << 16)); Emit(0x90 | (60 << 8) | (100 << 16));
+            Assert.Equal("004", Find<TextBlock>(window, "ProgramDisplay").Text);
+            Emit(0xa0 | (60 << 8) | (80 << 16)); Emit(0x80 | (60 << 8));
+            Emit(0xb0 | (20 << 8) | (127 << 16)); Emit(0xb0 | (20 << 8) | (64 << 16)); Emit(0xb0 | (20 << 8));
+            Assert.Empty(midi.Output.Messages);
+            window.Execute("4"); window.Execute("2"); Emit(0xc0 | (70 << 8)); Assert.Equal(new[] { 0xc0 | (42 << 8) }, midi.Output.Messages);
+            Click(Find<Button>(window, "ConfigureNoteMapping")); Find<ComboBox>(window, "LearnCommand").SelectedIndex = 2; Click(Find<Button>(window, "LearnMidi"));
+            Emit(0xb0 | (22 << 8) | (127 << 16)); Emit(0xb0 | (22 << 8) | (64 << 16));
+            Click(Find<Button>(window, "RemoveLearnedMapping"));
+            Emit(0xb0 | (22 << 8) | (80 << 16)); Emit(0xb0 | (22 << 8)); Assert.Single(midi.Output.Messages);
+            Emit(0xb0 | (22 << 8) | (127 << 16)); Assert.Equal(0xb0 | (22 << 8) | (127 << 16), midi.Output.Messages[^1]);
+            Click(Find<Button>(window, "CancelMapping"));
+            Emit(0x90 | (37 << 8) | (100 << 16)); Find<CheckBox>(window, "MidiNoteEntry").IsChecked = false;
+            Emit(0x80 | (37 << 8)); Assert.Equal(2, midi.Output.Messages.Count);
+
+            void Emit(int raw) { midi.Input.Emit(raw); Dispatcher.UIThread.RunJobs(); }
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public async Task ForwardedNotesAreReleasedWhenRoutingChanges()
+    {
+        var midi = new FakeMidi(); var window = new SenderWindow(true, null, midi, new SenderSettings { ForwardMidi = true });
+        window.Show(); OpenConfiguration(window);
+        try
+        {
+            await WaitUntil(() => Find<ComboBox>(window, "MidiOutput").ItemCount == 1);
+            Find<ComboBox>(window, "MidiInput").SelectedIndex = 1; Click(Find<Button>(window, "ConnectMidi")); await WaitUntil(() => midi.Input.Started);
+            int on = 0x94 | (60 << 8) | (100 << 16), off = 0x84 | (60 << 8);
+            midi.Input.Emit(on); Dispatcher.UIThread.RunJobs(); Find<CheckBox>(window, "ForwardMidi").IsChecked = false;
+            Assert.Equal(new[] { on, off }, midi.Output.Messages);
+            Find<CheckBox>(window, "ForwardMidi").IsChecked = true; midi.Input.Emit(on); Dispatcher.UIThread.RunJobs();
+            Click(Find<Button>(window, "ConfigureNoteMapping")); Click(Find<Button>(window, "LearnMidi"));
+            midi.Input.Emit(on); Dispatcher.UIThread.RunJobs(); Assert.Equal(new[] { on, off, on, off }, midi.Output.Messages);
+            midi.Input.Emit(off); Dispatcher.UIThread.RunJobs(); Assert.Equal(4, midi.Output.Messages.Count);
+            Click(Find<Button>(window, "CancelMapping"));
+            int second = 0x9f | (80 << 8) | (100 << 16); midi.Input.Emit(second); Dispatcher.UIThread.RunJobs();
+            Click(Find<Button>(window, "ConfigureNoteMapping")); Find<TextBox>(window, "MappingNoteNumber").Text = "80"; Click(Find<Button>(window, "SaveMapping"));
+            midi.Input.Emit(0x8f | (80 << 8)); Dispatcher.UIThread.RunJobs(); Assert.Equal(0x8f | (80 << 8), midi.Output.Messages[^1]);
+            midi.Input.Emit(0x9f | (81 << 8) | (100 << 16)); Dispatcher.UIThread.RunJobs();
+            Click(Find<Button>(window, "DisconnectMidi")); Assert.Equal(0x8f | (81 << 8), midi.Output.Messages[^1]); Assert.True(midi.Output.Disposed);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public async Task ForwardingFailureDisconnectsAndRetainsPendingEntry()
+    {
+        var midi = new FakeMidi { FailSend = true }; var window = new SenderWindow(true, null, midi, new SenderSettings { ForwardMidi = true });
+        window.Show(); OpenConfiguration(window);
+        try
+        {
+            await WaitUntil(() => Find<ComboBox>(window, "MidiOutput").ItemCount == 1);
+            Find<ComboBox>(window, "MidiInput").SelectedIndex = 1; Click(Find<Button>(window, "ConnectMidi")); await WaitUntil(() => midi.Input.Started);
+            window.Execute("4"); window.Execute("2"); midi.Input.Emit(0xe0 | (64 << 16)); Dispatcher.UIThread.RunJobs();
+            Assert.True(midi.Output.Disposed); Assert.True(midi.Input.Disposed); Assert.Equal("042", Find<TextBlock>(window, "ProgramDisplay").Text);
+            Assert.Contains(Controls<TextBlock>(window), label => label.Text?.StartsWith("MIDI forwarding failed:", StringComparison.Ordinal) == true);
         }
         finally { window.Close(); }
     }
@@ -66,20 +168,19 @@ public sealed class MidiRoutingTests
         var midi = new FakeMidi { SupportsVirtualOutput = true };
         midi.Output.FailAfter = 5;
         var window = new SenderWindow(true, null, midi);
-        window.Show();
+        window.Show(); OpenConfiguration(window);
         try
         {
             await WaitUntil(() => Find<ComboBox>(window, "MidiOutput").ItemCount == 2);
             Click(Find<Button>(window, "ConnectMidi"));
-            await WaitUntil(() => Equals(Find<Button>(window, "ConnectMidi").Content, "Disconnect"));
-            foreach (var expander in window.GetVisualDescendants().OfType<Expander>()) { expander.IsExpanded = true; }
+            await WaitUntil(() => Find<Button>(window, "DisconnectMidi").IsEnabled);
             Dispatcher.UIThread.RunJobs();
             Find<ComboBox>(window, "OutputChannel").SelectedIndex = 0;
             window.Execute("4"); window.Execute("2"); window.Execute("Send");
             Assert.Equal(5, midi.Output.Messages.Count);
             Assert.True(midi.Output.Disposed);
-            Assert.Equal("–42", Find<TextBlock>(window, "ProgramDisplay").Text);
-            Assert.Contains(window.GetVisualDescendants().OfType<TextBlock>(), c => c.Text?.Contains("Some channels may already", StringComparison.Ordinal) == true);
+            Assert.Equal("042", Find<TextBlock>(window, "ProgramDisplay").Text);
+            Assert.Contains(Controls<TextBlock>(window), c => c.Text?.Contains("Some channels may already", StringComparison.Ordinal) == true);
         }
         finally { window.Close(); }
     }
@@ -89,26 +190,27 @@ public sealed class MidiRoutingTests
     {
         var midi = new FakeMidi();
         var window = new SenderWindow(true, null, midi);
-        window.Show();
+        window.Show(); OpenConfiguration(window);
         try
         {
             await WaitUntil(() => Find<ComboBox>(window, "MidiOutput").ItemCount == 1);
             Find<ComboBox>(window, "MidiInput").SelectedIndex = 1;
             Click(Find<Button>(window, "ConnectMidi"));
             await WaitUntil(() => midi.Input.Started);
-            foreach (var expander in window.GetVisualDescendants().OfType<Expander>()) { expander.IsExpanded = true; }
             Dispatcher.UIThread.RunJobs();
+            Find<ComboBox>(window, "OutputChannel").SelectedIndex = 16;
+            Click(Find<Button>(window, "ConfigureNoteMapping")); Dispatcher.UIThread.RunJobs();
             var command = Find<ComboBox>(window, "LearnCommand");
             Learn(4, 10); Learn(2, 11); Learn(10, 12);
             Assert.Empty(midi.Output.Messages);
-            Find<ComboBox>(window, "OutputChannel").SelectedIndex = 16;
+            Click(Find<Button>(window, "CancelMapping")); Dispatcher.UIThread.RunJobs();
             midi.Input.Emit(0xc0 | (10 << 8)); Dispatcher.UIThread.RunJobs();
             midi.Input.Emit(0xc0 | (11 << 8)); Dispatcher.UIThread.RunJobs();
             Assert.Empty(midi.Output.Messages);
-            Assert.Equal("–42", Find<TextBlock>(window, "ProgramDisplay").Text);
+            Assert.Equal("042", Find<TextBlock>(window, "ProgramDisplay").Text);
             midi.Input.Emit(0xc0 | (12 << 8)); Dispatcher.UIThread.RunJobs();
             Assert.Equal(new[] { 0xcf | (42 << 8) }, midi.Output.Messages);
-            Click(Find<Button>(window, "ConnectMidi"));
+            Click(Find<Button>(window, "DisconnectMidi"));
             Assert.True(midi.Input.Disposed); Assert.True(midi.Output.Disposed);
             midi.Input.Emit(0xc0 | (12 << 8)); Dispatcher.UIThread.RunJobs();
             Assert.Single(midi.Output.Messages);
@@ -128,7 +230,7 @@ public sealed class MidiRoutingTests
     {
         var midi = new FakeMidi { FailStart = true };
         var window = new SenderWindow(true, null, midi);
-        window.Show();
+        window.Show(); OpenConfiguration(window);
         try
         {
             await WaitUntil(() => Find<ComboBox>(window, "MidiOutput").ItemCount == 1);
@@ -138,8 +240,8 @@ public sealed class MidiRoutingTests
             await WaitUntil(() => midi.Output.Disposed);
             Assert.True(midi.Input.Disposed);
             Assert.Empty(midi.Output.Messages);
-            Assert.Equal("–42", Find<TextBlock>(window, "ProgramDisplay").Text);
-            Assert.False(Find<Button>(window, "SendProgram").IsEnabled);
+            Assert.Equal("042", Find<TextBlock>(window, "ProgramDisplay").Text);
+            Assert.True(Find<Button>(window, "SendProgram").IsEnabled);
         }
         finally { window.Close(); }
     }
@@ -149,21 +251,45 @@ public sealed class MidiRoutingTests
     {
         var midi = new FakeMidi { FailSend = true };
         var window = new SenderWindow(true, null, midi);
-        window.Show();
+        window.Show(); OpenConfiguration(window);
         try
         {
             await WaitUntil(() => Find<ComboBox>(window, "MidiOutput").ItemCount == 1);
             Click(Find<Button>(window, "ConnectMidi"));
-            await WaitUntil(() => Equals(Find<Button>(window, "ConnectMidi").Content, "Disconnect"));
+            await WaitUntil(() => Find<Button>(window, "DisconnectMidi").IsEnabled);
             window.Execute("4"); window.Execute("2"); window.Execute("Send");
             Assert.True(midi.Output.Disposed); Assert.Empty(midi.Output.Messages);
-            Assert.Equal("–42", Find<TextBlock>(window, "ProgramDisplay").Text);
-            Assert.False(Find<Button>(window, "SendProgram").IsEnabled);
+            Assert.Equal("042", Find<TextBlock>(window, "ProgramDisplay").Text);
+            Assert.True(Find<Button>(window, "SendProgram").IsEnabled);
         }
         finally { window.Close(); }
     }
 
-    private static T Find<T>(Window window, string name) where T : Control => window.GetVisualDescendants().OfType<T>().First(c => c.Name == name);
+    [AvaloniaFact]
+    public async Task ClosingConfigurationKeepsMidiConnectedAndKeyboardEntryWorks()
+    {
+        var midi = new FakeMidi(); var window = new SenderWindow(true, null, midi);
+        window.Show(); OpenConfiguration(window);
+        try
+        {
+            await WaitUntil(() => Find<ComboBox>(window, "MidiOutput").ItemCount == 1);
+            Find<ComboBox>(window, "MidiInput").SelectedIndex = 1;
+            Click(Find<Button>(window, "ConnectMidi")); await WaitUntil(() => midi.Input.Started);
+            Click(Find<Button>(window, "SaveConfiguration")); Dispatcher.UIThread.RunJobs();
+            Assert.True(Find<Button>(window, "OpenConfiguration").IsFocused);
+            Assert.True(midi.Input.Started); Assert.False(midi.Output.Disposed);
+            foreach (var key in new[] { Avalonia.Input.PhysicalKey.Digit4, Avalonia.Input.PhysicalKey.Digit2, Avalonia.Input.PhysicalKey.Enter })
+            {
+                window.KeyPressQwerty(key, Avalonia.Input.RawInputModifiers.None); window.KeyReleaseQwerty(key, Avalonia.Input.RawInputModifiers.None);
+            }
+            Assert.Equal(new[] { 0xc0 | (42 << 8) }, midi.Output.Messages);
+        }
+        finally { window.Close(); }
+    }
+
+    private static IEnumerable<T> Controls<T>(Window window) where T : Control => window.GetVisualDescendants().OfType<T>().Concat(window.OwnedWindows.SelectMany(Controls<T>));
+    private static T Find<T>(Window window, string name) where T : Control => Controls<T>(window).First(c => c.Name == name);
+    private static void OpenConfiguration(Window window) { Click(Find<Button>(window, "OpenConfiguration")); Dispatcher.UIThread.RunJobs(); }
     private static void Click(Button button) => button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
     private static async Task WaitUntil(Func<bool> condition)
     {
@@ -197,9 +323,10 @@ public sealed class MidiRoutingTests
         public bool Disposed { get; private set; }
         public bool FailStart { get; set; }
         public event EventHandler<MidiShortMessageEventArgs>? MessageReceived;
-        public event EventHandler<MidiSysExMessageEventArgs>? SysexMessageReceived { add { } remove { } }
+        public event EventHandler<MidiSysExMessageEventArgs>? SysexMessageReceived;
         public event EventHandler<string>? ErrorReceived { add { } remove { } }
         public void Emit(int raw) => MessageReceived?.Invoke(this, new(raw));
+        public void EmitSysEx(byte[] bytes) => SysexMessageReceived?.Invoke(this, new(bytes));
         public void Start()
         {
             if (FailStart) { throw new IOException("Simulated startup failure"); }

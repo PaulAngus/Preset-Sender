@@ -49,6 +49,14 @@ public sealed class VirtualMidiIntegrationTests
                 Assert.Equal(expected, await received.Reader.ReadAsync(timeout.Token));
                 Assert.Equal(expected, await secondReceived.Reader.ReadAsync(timeout.Token));
             }
+            // Cover every channel-message type used by incoming MIDI forwarding.
+            foreach (int message in new[] { 0x92 | (60 << 8) | (100 << 16), 0xb8 | (20 << 8) | (64 << 16),
+                0xa2 | (60 << 8) | (80 << 16), 0xd2 | (90 << 8), 0xe2 | (127 << 8) | (64 << 16), 0x82 | (60 << 8) })
+            {
+                output.Send(message);
+                Assert.Equal(message, await received.Reader.ReadAsync(timeout.Token));
+                Assert.Equal(message, await secondReceived.Reader.ReadAsync(timeout.Token));
+            }
             input.Stop();
             secondInput.Stop();
         }
