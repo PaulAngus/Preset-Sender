@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
+    <EnableMacOSCodeSign>false</EnableMacOSCodeSign>
+  </PropertyGroup>
+  <ItemGroup><Using Remove="MightBeUseful.Midi" /></ItemGroup>
+</Project>

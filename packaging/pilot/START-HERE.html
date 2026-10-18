@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Preset Sender portable test pilot</title>
+<style>body{font:17px system-ui;max-width:950px;margin:40px auto;padding:0 20px;color:#17232d}li{margin:12px 0}code{background:#edf1f5;padding:2px 5px}table{border-collapse:collapse}td,th{border:1px solid #ccd3d9;padding:12px;text-align:left}</style>
+<h1>Preset Sender portable test pilot</h1>
+<p>This folder contains prebuilt, self-contained applications and tests. No .NET installation, SDK, PowerShell, Git, package restore or internet connection is required on the test machines. The private runtime files are application components, like the self-contained Sender app; they do not install or register a system runtime.</p>
+<h2>Windows 10 and Windows 11</h2>
+<ol><li>Extract the entire ZIP to an ordinary writable local folder. Do not run from inside the ZIP.</li>
+<li>Double-click <code>Setup-Windows.cmd</code>. It verifies the files, checks MIDI ports and runs the functional suite. It opens an HTML report.</li>
+<li>Double-click <code>Run-Windows.cmd</code> for functional, native MIDI and desktop checks. Keep this desktop unlocked, close normal Sender instances, and let the test finish typing into its own windows.</li></ol>
+<p>On Windows 10, or Windows 11 without usable MIDI Services, install <a href="https://www.tobias-erichsen.de/software/loopmidi.html">loopMIDI from its author</a>, create one port named <code>PresetSender-Test</code> and leave loopMIDI running. Then run the tests again. This is the only separate driver/tool required for legacy Windows; no .NET or PowerShell is installed by the pilot. An eligible Windows 11 machine uses its existing MIDI Services.</p>
+<h2>Apple Silicon Macs: prepare once on the Mac development VM</h2>
+<ol><li>Extract the Mac ZIP on the Mac development VM.</li>
+<li>Run <code>Prepare-on-Mac-DEV.command</code> once. It uses macOS codesign to sign the private binaries and updates the manifest. It installs nothing. The default is ad hoc signing for these private machines; a developer identity may be supplied with <code>PILOT_SIGNING_IDENTITY</code>. This is not Apple notarization.</li>
+<li>Run <code>Setup-Mac.command</code> on the development VM to validate execution, then copy the <strong>entire prepared folder</strong> to each test Mac or native OS installation. Signing is development-machine work; test machines just run the prepared files.</li>
+<li>On each installation, double-click <code>Setup-Mac.command</code>, then <code>Run-Mac.command</code>. If Finder does not launch a command file, open Terminal, type <code>bash </code>, drag the command file into Terminal and press Return.</li></ol>
+<p>For native MIDI checks, open <strong>Audio MIDI Setup → Window → Show MIDI Studio → IAC Driver</strong>, enable <strong>Device is online</strong> and add a bus named <code>PresetSender-Test</code>. Do this once in each macOS installation and VM. The launcher detects both <code>PresetSender-Test</code> and <code>IAC Driver PresetSender-Test</code>. <a href="https://support.apple.com/guide/audio-midi-setup/transfer-midi-information-between-apps-ams1013/mac">Apple's instructions</a>.</p>
+<h2>Reports</h2>
+<p>Every invocation creates a new folder under <code>results/</code>, including <code>report.html</code>, <code>report.json</code>, per-test results, MIDI traces, logs and screenshots. The latest path is saved in <code>LATEST-REPORT.txt</code>. Copy the result folder back to the development machine for investigation.</p>
+<table><tr><th>Exit code</th><th>Meaning</th></tr><tr><td>0</td><td>All checks requested by this invocation passed.</td></tr><tr><td>1</td><td>A check failed; inspect the report and logs.</td></tr><tr><td>2</td><td>Required native/desktop coverage was unavailable, usually because a test MIDI port is missing.</td></tr></table>
+<p>Setup requests the functional suite. Run requests the functional/native suite on Macs and adds real desktop scenarios on Windows. Mac desktop automation, physical Fractal-device readback, installation/upgrade behaviour and notarization are outside this pilot. Missing native coverage is reported as incomplete.</p>
+<h2>Optional commands</h2>
+<p>For unattended runs, set <code>PRESET_SENDER_NO_PAUSE=1</code> and pass <code>--no-open</code> to the launcher. Use <code>--suite Functional</code>, <code>--suite Native</code>, <code>--suite Desktop</code> (Windows), or <code>--loopback "EXACT PORT NAME"</code> when needed. No ChatGPT desktop takeover is involved.</p>
+<p>The bundle creates test profiles and caches inside its result folders. Normal Sender settings and installed executables are not replaced. No service, scheduled task, SDK or runtime is installed. The only MIDI destinations selected are the test virtual port or a dedicated named loopback.</p>
+</html>

@@ -59,6 +59,11 @@ public sealed partial class SenderWindow : Window
         var body = BuildSettingsBody(out var remove);
         _configurationContent = BuildConfigurationContent(body);
         Content = BuildMainScreen();
+        foreach (var control in new Control[] { _send, _display, _configure })
+        {
+            AutomationProperties.SetAutomationId(control, control.Name);
+        }
+        AutomationProperties.SetAutomationId(_status, "MidiStatus");
         _connect.Click += async (_, _) => await ToggleConnectionAsync();
         _refresh.Click += async (_, _) => await RefreshPortsAsync();
         _channel.SelectionChanged += (_, _) => { if (_restoringConfiguration) { return; } if (_channel.SelectedIndex >= 0) { _state.OutputChannel = _channel.SelectedIndex; } UpdateDisplay(); };
@@ -235,12 +240,16 @@ public sealed partial class SenderWindow : Window
         string? inputId = _input.SelectedItem is InputChoice selectedInput ? selectedInput.Id : _settings.InputId;
         string? outputName = (_output.SelectedItem as OutputChoice)?.Name ?? _settings.OutputName;
         int occurrence = (_output.SelectedItem as OutputChoice)?.Occurrence ?? _settings.OutputOccurrence;
-        bool virtualOutput = (_output.SelectedItem as OutputChoice)?.IsVirtual ?? _settings.VirtualOutput ?? (_backend.SupportsVirtualOutput && outputName is null);
+        bool? virtualOutput = (_output.SelectedItem as OutputChoice)?.IsVirtual ?? _settings.VirtualOutput;
         try
         {
-            var ports = await Task.Run(() => !_discoverPorts
-                ? (Inputs: Array.Empty<(string Id, string Name)>(), Outputs: Array.Empty<(int Index, string Name)>())
-                : (Inputs: _backend.GetInputDevices().ToArray(), Outputs: _backend.GetOutputDevices().ToArray()));
+            var ports = !_discoverPorts
+                ? (Inputs: Array.Empty<(string Id, string Name)>(), Outputs: Array.Empty<(int Index, string Name)>(), Virtual: false)
+                : await Task.Run(() =>
+                {
+                    _backend.RefreshCapabilities();
+                    return (Inputs: _backend.GetInputDevices().ToArray(), Outputs: _backend.GetOutputDevices().ToArray(), Virtual: _backend.SupportsVirtualOutput);
+                });
             if (_closed)
             {
                 return;
@@ -248,10 +257,12 @@ public sealed partial class SenderWindow : Window
 
             var inputs = new[] { new InputChoice(null, "None — computer keyboard only") }.Concat(ports.Inputs.Select(p => new InputChoice(p.Id, p.Name))).ToArray();
             var outputs = ports.Outputs.Select(p => new OutputChoice(p.Index, p.Name, ports.Outputs.TakeWhile(q => q.Index != p.Index).Count(q => q.Name == p.Name))).ToList();
-            if (_backend.SupportsVirtualOutput) { outputs.Insert(0, new OutputChoice(-1, "Preset Sender (virtual device)", 0, true)); }
+            virtualOutput ??= ports.Virtual && outputName is null;
+            if (ports.Virtual) { outputs.Insert(0, new OutputChoice(-1, "Preset Sender (virtual device)", 0, true)); }
+            _virtualMidiHelp.Text = VirtualMidiHelp(ports.Virtual);
             _input.ItemsSource = inputs; _input.SelectedItem = inputs.FirstOrDefault(p => p.Id == inputId) ?? inputs[0];
-            _output.ItemsSource = outputs; _output.SelectedItem = outputs.FirstOrDefault(p => virtualOutput ? p.IsVirtual : !p.IsVirtual && p.Name == outputName && p.Occurrence == occurrence);
-            if (_output.SelectedItem is null && outputs.Count > 0 && outputName is null && !virtualOutput)
+            _output.ItemsSource = outputs; _output.SelectedItem = outputs.FirstOrDefault(p => virtualOutput.Value ? p.IsVirtual : !p.IsVirtual && p.Name == outputName && p.Occurrence == occurrence);
+            if (_output.SelectedItem is null && outputs.Count > 0 && outputName is null && !virtualOutput.Value)
             {
                 _output.SelectedIndex = 0;
             }

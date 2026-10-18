@@ -3,7 +3,7 @@
     <OutputType>WinExe</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>0.1.0</Version>
+    <Version>0.1.3</Version>
     <AssemblyTitle>Preset Sender</AssemblyTitle>
     <Product>Preset Sender</Product>
     <Title>Preset Sender</Title>
@@ -15,6 +15,7 @@
     <ProjectReference Include="$(SharedMidiSourceRoot)/src/MightBeUseful.Midi/MightBeUseful.Midi.csproj" Condition="'$(SharedMidiSourceRoot)' != ''" />
     <AvaloniaResource Include="Assets/preset-sender-256.png" />
     <Compile Remove="Tests/**/*.cs" />
+    <Compile Remove="tools/**/*.cs" />
     <Compile Remove="Platforms/**/*.cs" />
     <Compile Include="Platforms/$(SenderPlatform)/MidiBackend.cs" />
     <PackageReference Include="Avalonia" Version="11.2.3" />
@@ -22,6 +23,10 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.3" />
   </ItemGroup>
   <ItemGroup Condition="'$(SenderPlatform)' == 'Windows'">
+    <PackageReference Include="Windows.Devices.Midi2" Version="0.99.88-preview.10" GeneratePathProperty="true" PrivateAssets="all" ExcludeAssets="all" />
+    <!-- Managed resources avoid extracting the native API at all on legacy Windows. -->
+    <EmbeddedResource Include="$(PkgWindows_Devices_Midi2)/runtimes/win-x64/native/Windows.Devices.Midi2.dll" LogicalName="PresetSender.MidiApi.Windows.Devices.Midi2.dll" />
+    <EmbeddedResource Include="$(PkgWindows_Devices_Midi2)/runtimes/win-x64/native/Windows.Devices.Midi2.pri" LogicalName="PresetSender.MidiApi.Windows.Devices.Midi2.pri" />
     <PackageReference Include="MightBeUseful.Midi.Windows" Version="$(SharedMidiVersion)" Condition="'$(SharedMidiSourceRoot)' == ''" />
     <ProjectReference Include="$(SharedMidiSourceRoot)/src/MightBeUseful.Midi.Windows/MightBeUseful.Midi.Windows.csproj" Condition="'$(SharedMidiSourceRoot)' != ''" />
     <PackageReference Include="Avalonia.Win32" Version="11.2.3" />

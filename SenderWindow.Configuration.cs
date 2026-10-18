@@ -17,6 +17,7 @@ public sealed partial class SenderWindow
 {
     private readonly Button _disconnect = new() { Name = "DisconnectMidi", Content = "Disconnect", IsEnabled = false };
     private readonly TextBlock _configurationStatus = Text("Not connected");
+    private readonly TextBlock _virtualMidiHelp = Text(VirtualMidiHelp(false));
     private readonly StackPanel _thruInputs = new() { Name = "ThruInputs", Spacing = 6 };
     private readonly StackPanel _midiLearningContent = new() { Name = "MidiLearningSection", Spacing = 8 };
     private readonly DispatcherTimer _autoSendTimer = new();
@@ -24,6 +25,17 @@ public sealed partial class SenderWindow
     private Window? _diagnosticsWindow;
     private readonly Queue<string> _midiLog = new();
     private TextBox? _diagnosticsText;
+
+    private static string VirtualMidiHelp(bool supportsVirtualOutput)
+    {
+#if SENDER_MACOS
+        return "For another app on this Mac, enable the IAC Driver in Audio MIDI Setup and create a bus. Select its output here and its matching input in the receiving app.";
+#else
+        return supportsVirtualOutput
+            ? "To send to another app, select Preset Sender (virtual device) as the MIDI output, then select its matching input in the receiving app. Requires Windows 11 25H2 or later."
+            : "For another app without built-in virtual MIDI, install loopMIDI and create a port. Select its output here and its matching input in the receiving app.";
+#endif
+    }
 
     // PresetMaestro's BuildApprovedConnection and ApprovedEntryOptions, using
     // the sender's palette and the same compact native Fluent controls.
@@ -34,6 +46,10 @@ public sealed partial class SenderWindow
         _channel.Name = "OutputChannel"; _numbering.Name = "PresetNumbering";
         _command.Name = "LearnCommand"; _learn.Name = "LearnMidi"; _connect.Name = "ConnectMidi"; _refresh.Name = "RefreshMidi";
         _forward.Name = "ForwardMidi";
+        foreach (var control in new Control[] { _input, _output, _inputChannel, _channel, _numbering, _connect, _refresh, _disconnect })
+        {
+            AutomationProperties.SetAutomationId(control, control.Name);
+        }
         ToolTip.SetTip(_forward, "Forward unused channel messages on their original channels. Preset-entry and learning controls, SysEx and clock/transport are excluded.");
         _channel.ItemsSource = AllOutputChannels.Concat(Enumerable.Range(1, 16).Select(i => $"Channel {i}")).ToArray(); _channel.SelectedIndex = _state.OutputChannel;
         _inputChannel.ItemsSource = AnyInputChannel.Concat(Enumerable.Range(1, 16).Select(i => i.ToString(CultureInfo.InvariantCulture))).ToArray(); _inputChannel.SelectedIndex = _state.InputChannel;
@@ -123,7 +139,7 @@ public sealed partial class SenderWindow
         AutomationProperties.SetName(_mappingStatus, "MIDI learning status and assignments");
         AutomationProperties.SetLiveSetting(_mappingStatus, AutomationLiveSetting.Polite);
         ApplyConfigurationStyles(_midiLearningContent);
-        advanced.Children.Add(Text(_backend.SupportsVirtualOutput ? "To send to another app, select Preset Sender (virtual device) as the MIDI output, then select its matching input in the receiving app. Requires Windows 11 25H2 or later." : "For another app on this computer, select a virtual MIDI output and use its matching input in the receiving app."));
+        advanced.Children.Add(_virtualMidiHelp);
         var body = new StackPanel { Spacing = 16, Margin = new Thickness(10, 4, 10, 16) };
         ApplyConfigurationStyles(body);
         body.Children.Add(ConfigLabel($"Version: {typeof(SenderWindow).Assembly.GetName().Version?.ToString(3)}", 13, true));

@@ -1,6 +1,10 @@
 # Preset Sender
 
+Version 0.1.3 restores standalone Windows packaging: the EXE contains both native Windows MIDI API files and automatically extracts verified copies into its own cache on Windows 11 25H2 or later. No separate MIDI API installer, companion files, runtime download or .NET installation is needed. Windows 10 uses hardware MIDI or user-installed loopMIDI; the bundled API is never extracted or loaded there. Compatible Windows MIDI Services must still be available for built-in virtual MIDI. Backend selection and extraction diagnostics are recorded at `%LOCALAPPDATA%\PresetSender\midi-backend.log`.
+
 Shared MIDI implementation: see [dependency and setup notes](dependencies/midi/README.md). Current and legacy backends come from the `MightBeUseful.Midi` packages maintained in [MIDIHelperLibrary](https://github.com/PaulAngus/MIDIHelperLibrary); earlier implementation/package details below describe the pre-migration builds.
+
+Startup detection runs off the UI thread, retries temporary service/transport failures up to three times, and allows ten seconds for discovery. **Refresh Devices** rechecks backend capabilities as well as ports, so a temporary fallback can recover without restarting. Refresh reuses any native probe still in progress instead of accumulating blocked calls. A genuinely unavailable service still falls back to legacy MIDI. The shared provider remains reusable; Preset Sender opts into its own bundled API directory rather than requiring the shared per-user installation.
 
 For loopMIDI on older Windows, see the [setup instructions](#loopmidi-setup-on-older-windows).
 
@@ -112,7 +116,7 @@ dotnet format PresetSender.slnx --verify-no-changes
 ./Publish-PresetSender.ps1
 ```
 
-The initialization script downloads a pinned, checksum-verified Microsoft preview NuGet package into the ignored `packages/` feed. Run it before the first Windows build on a fresh checkout; the publish script runs it automatically. The publish script creates a standalone Windows x64 executable at `artifacts/windows/PresetSender.exe`. Full bundle extraction includes both Windows MIDI API components and makes them available to WinRT activation without companion files. The virtual MIDI subprocess launches the original executable rather than looking in the extraction cache. It requires no separately installed .NET runtime.
+The initialization script downloads a pinned, checksum-verified Microsoft preview NuGet package into the ignored `packages/` feed. Run it before the first Windows build on a fresh checkout; the publish script runs it automatically and does not install the API on the developer PC. The publish script creates a standalone Windows x64 executable at `artifacts/windows/PresetSender.exe`. The two MIDI API files are managed assembly resources, so .NET does not automatically extract them on legacy Windows. On eligible Windows 11, the app verifies and extracts them into `%LOCALAPPDATA%/PresetSender/Midi/windows-midi/0.99.88-preview.10/x64` (under `DOTNET_BUNDLE_EXTRACT_BASE_DIR` when set), then configures the shared provider to load that directory. Damaged cached files are repaired from the embedded resources, and concurrent starts share the same verified files. The virtual MIDI subprocess launches the original executable rather than looking in the extraction cache. It requires no separately installed .NET runtime.
 
 Normal tests simulate MIDI and do not contact hardware or create system endpoints. The native check covers two simultaneous legacy MIDI receivers, channel 6 individually, all sixteen wire channels, note-on/CC/note-off bytes and endpoint removal. To run it explicitly:
 
@@ -124,7 +128,7 @@ Remove-Item Env:PRESET_SENDER_NATIVE_MIDI_TEST
 
 To test the packaged executable, also set `PRESET_SENDER_TEST_EXE` to its absolute path before running the native check. Copy only the EXE into an empty directory and set `DOTNET_BUNDLE_EXTRACT_BASE_DIR` to a fresh cache directory to check extraction. On 12 October 2026, all 26 tests passed using that setup, including two MIDI receivers, all sixteen channels, and endpoint removal. Both MIDI API files were extracted from the EXE. This confirms standalone packaging on the development PC; the other PC still needs compatible Windows MIDI Services.
 
-The packaging uses Microsoft's [single-file deployment and full extraction guidance](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview). Full extraction lets the WinRT projection locate the native MIDI component in `AppContext.BaseDirectory`.
+The packaging uses Microsoft's [single-file deployment and full extraction guidance](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview) for .NET and Avalonia. Native MIDI extraction is separately gated by the OS check and loaded explicitly through the shared provider.
 
 On macOS, run `dotnet build PresetSender.slnx -c Release`, `dotnet test PresetSender.slnx -c Release`, or `dotnet run --project PresetSender.csproj` directly; the Windows MIDI initialization script is unnecessary. Platform selection follows the host or runtime identifier, with `-p:SenderPlatform=macOS` available for explicit selection. Native Mac launch and MIDI acceptance remain unverified on this Windows development PC.
 
@@ -139,6 +143,12 @@ Windows settings retain `%APPDATA%\PresetSender\settings.json`, so moving reposi
 Migration validation on 12 October 2026: a fresh local clone restored and built the Windows and macOS targets, passed all 33 simulated Windows tests and formatting verification, and published the standalone Windows EXE. The main checkout passed all 34 Windows tests with native MIDI enabled and an EXE-only test directory using a fresh extraction cache. PresetMaestro's Release build also passed after the old sender directory was removed. The macOS target was compiled on Windows; native Mac execution and the new CI jobs have not yet been run.
 
 UX decisions and verification are recorded in [ux.md](ux.md).
+
+## Automated testing
+
+For unattended functional, native MIDI and packaged Windows desktop testing, run
+`pwsh -NoProfile -File ./Test-PresetSender.ps1`. See [the testing pilot guide](docs/testing-pilot.md)
+for the reports, isolated settings and setup on Windows 10/11 and macOS.
 
 ## Logo and icon
 

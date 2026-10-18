@@ -5,6 +5,7 @@ namespace PresetSender;
 
 internal interface ISenderMidiBackend
 {
+    void RefreshCapabilities() { }
     IReadOnlyList<(string Id, string Name)> GetInputDevices();
     IReadOnlyList<(int Index, string Name)> GetOutputDevices();
     IMidiInputPort OpenInput(string id);
@@ -15,6 +16,31 @@ internal interface ISenderMidiBackend
 
 internal sealed class NativeMidiBackend : ISenderMidiBackend
 {
+    public void RefreshCapabilities()
+    {
+#if SENDER_WINDOWS
+        var capabilities = MightBeUseful.Midi.Windows.WindowsMidiBackend.RefreshCapabilities();
+        try
+        {
+            string directory = string.IsNullOrWhiteSpace(SenderSettings.ConfiguredDirectory)
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PresetSender")
+                : SenderSettings.ResolveDirectory(SenderSettings.ConfiguredDirectory);
+            Directory.CreateDirectory(directory);
+            File.WriteAllLines(Path.Combine(directory, "midi-backend.log"),
+            [
+                $"Version: {typeof(NativeMidiBackend).Assembly.GetName().Version}",
+                $"Windows: {Environment.OSVersion.Version}",
+                $"Backend: {capabilities.Description}",
+                $"MIDI API directory: {MightBeUseful.Midi.Windows.WindowsMidiBackend.ApiDirectory}",
+                $"Bundled API extraction: {BundledMidiApi.PreparationError ?? "OK"}",
+                $"MBU_MIDI_BACKEND: {Environment.GetEnvironmentVariable("MBU_MIDI_BACKEND") ?? "(unset)"}",
+                $"MIDI_FORWARDER_MIDI_API: {Environment.GetEnvironmentVariable("MIDI_FORWARDER_MIDI_API") ?? "(unset)"}",
+                $"MBU_MIDI_API_DIRECTORY: {Environment.GetEnvironmentVariable("MBU_MIDI_API_DIRECTORY") ?? "(unset)"}"
+            ]);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Security.SecurityException) { }
+#endif
+    }
     public IReadOnlyList<(string Id, string Name)> GetInputDevices() => MidiBackend.GetInputDevices();
     public IReadOnlyList<(int Index, string Name)> GetOutputDevices() => MidiBackend.GetOutputDevices();
     public IMidiInputPort OpenInput(string id) => MidiBackend.OpenInput(id);

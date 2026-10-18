@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>PresetSender.Pilot</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MightBeUseful.Midi" Version="$(SharedMidiVersion)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(SenderPlatform)' == 'Windows'">
+    <PackageReference Include="MightBeUseful.Midi.Windows" Version="$(SharedMidiVersion)" />
+    <PackageReference Include="FlaUI.UIA3" Version="5.0.0" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(SenderPlatform)' == 'macOS'">
+    <PackageReference Include="MightBeUseful.Midi.CoreMidi" Version="$(SharedMidiVersion)" />
+    <Compile Remove="WindowsDesktop.cs" />
+  </ItemGroup>
+</Project>

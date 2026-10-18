@@ -7,6 +7,75 @@ namespace PresetSender.Tests;
 public sealed class VirtualMidiIntegrationTests
 {
     [NativeMidiFact]
+    public async Task StandaloneExeExtractsBundledApiInFreshCacheAndRepairsDamagedFiles()
+    {
+        string executable = Environment.GetEnvironmentVariable("PRESET_SENDER_TEST_EXE")
+            ?? Path.Combine(AppContext.BaseDirectory, "PresetSender.exe");
+        string cache = Path.Combine(Path.GetTempPath(), "sender-standalone-" + Guid.NewGuid().ToString("N"));
+        string directory = Path.Combine(cache, "windows-midi", "0.99.88-preview.10", "x64");
+        async Task Check()
+        {
+            var start = new System.Diagnostics.ProcessStartInfo(executable)
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true
+            };
+            start.ArgumentList.Add("--midi-backend");
+            start.Environment.Remove("MBU_MIDI_API_DIRECTORY");
+            start.Environment["MBU_MIDI_BACKEND"] = "current";
+            start.Environment["DOTNET_BUNDLE_EXTRACT_BASE_DIR"] = cache;
+            using var process = System.Diagnostics.Process.Start(start)!;
+            string output = await process.StandardOutput.ReadToEndAsync().WaitAsync(TimeSpan.FromSeconds(20));
+            await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal(0, process.ExitCode);
+            Assert.Contains("virtual loopback available", output, StringComparison.Ordinal);
+            Assert.Contains(directory, output, StringComparison.Ordinal);
+        }
+
+        await Task.WhenAll(Check(), Check());
+        foreach (string name in new[] { "Windows.Devices.Midi2.dll", "Windows.Devices.Midi2.pri" })
+        {
+            using var resource = typeof(BundledMidiApi).Assembly.GetManifestResourceStream("PresetSender.MidiApi." + name)!;
+            byte[] expected = System.Security.Cryptography.SHA256.HashData(resource);
+            string path = Path.Combine(directory, name);
+            Assert.Equal(expected, System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(path)));
+            await File.WriteAllTextAsync(path, "damaged cached component");
+        }
+        await Check();
+        foreach (string name in new[] { "Windows.Devices.Midi2.dll", "Windows.Devices.Midi2.pri" })
+        {
+            using var resource = typeof(BundledMidiApi).Assembly.GetManifestResourceStream("PresetSender.MidiApi." + name)!;
+            Assert.Equal(System.Security.Cryptography.SHA256.HashData(resource),
+                System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(Path.Combine(directory, name))));
+        }
+    }
+
+    [NativeMidiFact]
+    public async Task MissingOptionalApiReportsItsPathInsteadOfClassNotRegistered()
+    {
+        string executable = Environment.GetEnvironmentVariable("PRESET_SENDER_TEST_EXE")
+            ?? Path.Combine(AppContext.BaseDirectory, "PresetSender.exe");
+        string missingDirectory = Path.Combine(Path.GetTempPath(), "missing-midi-api-" + Guid.NewGuid().ToString("N"));
+        var start = new System.Diagnostics.ProcessStartInfo(executable)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true
+        };
+        start.ArgumentList.Add("--midi-backend");
+        start.Environment["MBU_MIDI_API_DIRECTORY"] = missingDirectory;
+        start.Environment["MBU_MIDI_BACKEND"] = "current";
+        using var process = System.Diagnostics.Process.Start(start)!;
+        string output = await process.StandardOutput.ReadToEndAsync().WaitAsync(TimeSpan.FromSeconds(15));
+        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(0, process.ExitCode);
+        Assert.Contains(missingDirectory, output, StringComparison.Ordinal);
+        Assert.Contains("Initialize-SharedMidi.ps1", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("Class not registered", output, StringComparison.Ordinal);
+    }
+
+    [NativeMidiFact]
     public async Task PublishedDeviceDeliversEveryChannelToTwoLegacyReceiversAndDisappearsOnClose()
     {
         var backend = new NativeMidiBackend();

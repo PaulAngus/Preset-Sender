@@ -75,6 +75,7 @@ public sealed partial class SenderWindow
             bool send = command == "Send", task = command.Length > 1;
             var button = send ? _send : new Button();
             button.Name = send ? "SendProgram" : task ? command + "Program" : "Digit" + command;
+            AutomationProperties.SetAutomationId(button, button.Name);
             button.Content = command == "Clear" ? "CLR" : command.ToUpperInvariant();
             button.MinHeight = 52; button.BorderThickness = default; button.CornerRadius = new CornerRadius(6); button.Padding = default;
             button.FontFamily = task && !send ? CommandFont : DisplayFont;
@@ -99,9 +100,11 @@ public sealed partial class SenderWindow
         var status = Text(""); status.Bind(TextBlock.TextProperty, _status.GetObservable(TextBlock.TextProperty));
         AutomationProperties.SetLiveSetting(status, AutomationLiveSetting.Polite);
         var save = new Button { Name = "SaveConfiguration", Content = "Save", MinWidth = 80, HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center };
+        AutomationProperties.SetAutomationId(save, "SaveConfiguration");
         save.Bind(BackgroundProperty, this.GetResourceObservable("SenderAccent")); save.Foreground = Brushes.White;
         save.Click += (_, _) => { if (!SaveSettings(commit: true)) { return; } _configurationSnapshot = null; _status.Text = "Configuration saved."; _configurationWindow?.Close(); };
         var cancel = new Button { Name = "CancelConfiguration", Content = "Cancel", MinWidth = 80, HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center }; cancel.Click += (_, _) => _configurationWindow?.Close();
+        AutomationProperties.SetAutomationId(cancel, "CancelConfiguration");
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Children = { save, cancel } };
         var footer = new Border { Child = new StackPanel { Spacing = 8, Children = { status, actions } }, Padding = new Thickness(16, 10) };
         var root = new DockPanel(); DockPanel.SetDock(header, Dock.Top); root.Children.Add(header); DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
@@ -127,6 +130,7 @@ public sealed partial class SenderWindow
             Content = _configurationContent
         };
         window.Bind(BackgroundProperty, this.GetResourceObservable("SenderBackground")); window.Bind(ForegroundProperty, this.GetResourceObservable("SenderText"));
+        AutomationProperties.SetAutomationId(window, "ConfigurationWindow");
         _configurationWindow = window;
         window.Opened += (_, _) => ConfigurationControl<Button>("CancelConfiguration").Focus();
         window.AddHandler(KeyDownEvent, (_, e) =>

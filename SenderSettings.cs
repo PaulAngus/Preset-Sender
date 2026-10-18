@@ -34,7 +34,21 @@ internal sealed class SenderSettings
         Bindings = [.. source.Bindings]; MidiNoteMap = new(source.MidiNoteMap); NoteInputChannels = new(source.NoteInputChannels); ThruInputs = [.. source.ThruInputs];
     }
 
-    private static string FilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PresetSender", "settings.json");
+    internal static string ResolveDirectory(string? configuredDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(configuredDirectory))
+        {
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PresetSender");
+        }
+        if (!Path.IsPathFullyQualified(configuredDirectory))
+        {
+            throw new ArgumentException("PRESET_SENDER_DATA_DIRECTORY must be an absolute path.");
+        }
+        return Path.GetFullPath(configuredDirectory);
+    }
+
+    internal static string? ConfiguredDirectory => Environment.GetEnvironmentVariable("PRESET_SENDER_DATA_DIRECTORY");
+    private static string FilePath => Path.Combine(ResolveDirectory(ConfiguredDirectory), "settings.json");
 
     public static SenderSettings Load()
     {

@@ -13,10 +13,40 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+#if SENDER_WINDOWS
+        BundledMidiApi.Prepare();
+#endif
+        if (args.Contains("--diagnostics-json", StringComparer.Ordinal))
+        {
+#if SENDER_WINDOWS
+            var capabilities = MightBeUseful.Midi.Windows.WindowsMidiBackend.Capabilities;
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                platform = "Windows",
+                osVersion = Environment.OSVersion.Version.ToString(),
+                backend = capabilities.Description,
+                canCreateVirtualPorts = capabilities.CanCreateVirtualPorts,
+                useMidiServices = capabilities.UseMidiServices,
+                apiDirectory = MightBeUseful.Midi.Windows.WindowsMidiBackend.ApiDirectory,
+                preparationError = BundledMidiApi.PreparationError
+            }));
+#else
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                platform = "macOS",
+                osVersion = Environment.OSVersion.Version.ToString(),
+                backend = "MightBeUseful.Midi.CoreMidi",
+                canCreateVirtualPorts = false,
+                useMidiServices = false
+            }));
+#endif
+            return;
+        }
         if (args.Contains("--midi-backend", StringComparer.Ordinal))
         {
 #if SENDER_WINDOWS
             Console.WriteLine(MightBeUseful.Midi.Windows.WindowsMidiBackend.Capabilities.Description);
+            Console.WriteLine($"MIDI API directory: {MightBeUseful.Midi.Windows.WindowsMidiBackend.ApiDirectory}");
 #else
             Console.WriteLine("CoreMIDI MIDI 1.0 (MightBeUseful.Midi.CoreMidi).");
 #endif

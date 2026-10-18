@@ -5,11 +5,64 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using MightBeUseful.Midi;
+using FakeMidi = PresetSender.Tests.Support.CapturedMidiBackend;
 
 namespace PresetSender.Tests;
 
 public sealed class MidiRoutingTests
 {
+    [AvaloniaFact]
+    public async Task SlowDetectionLeavesConfigurationResponsiveAndRunsOffUiThread()
+    {
+        using var release = new ManualResetEventSlim();
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var midi = new FakeMidi
+        {
+            RefreshAction = () =>
+            {
+                Assert.False(Dispatcher.UIThread.CheckAccess());
+                started.TrySetResult();
+                release.Wait();
+            }
+        };
+        var window = new SenderWindow(true, null, midi);
+        window.Show();
+        try
+        {
+            await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            OpenConfiguration(window);
+            Assert.Single(window.OwnedWindows);
+            Assert.False(Find<Button>(window, "RefreshMidi").IsEnabled);
+            release.Set();
+            await WaitUntil(() => Find<Button>(window, "RefreshMidi").IsEnabled);
+        }
+        finally { release.Set(); window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public async Task RefreshRecoversVirtualOutputWithoutRestartAndKeepsSavedSelection()
+    {
+        var midi = new FakeMidi();
+        var window = new SenderWindow(true, null, midi, new SenderSettings { VirtualOutput = true });
+        window.Show(); OpenConfiguration(window);
+        try
+        {
+            await WaitUntil(() => Find<Button>(window, "RefreshMidi").IsEnabled && midi.RefreshCount == 1);
+            Assert.Equal(1, Find<ComboBox>(window, "MidiOutput").ItemCount);
+            Assert.Null(Find<ComboBox>(window, "MidiOutput").SelectedItem);
+            midi.RecoverVirtualOnRefresh = true;
+            Click(Find<Button>(window, "RefreshMidi"));
+            await WaitUntil(() => Find<ComboBox>(window, "MidiOutput").ItemCount == 2);
+            Assert.Equal(2, midi.RefreshCount);
+            Assert.Equal("Preset Sender (virtual device)", Find<ComboBox>(window, "MidiOutput").SelectedItem?.ToString());
+            Click(Find<Button>(window, "ConnectMidi"));
+            await WaitUntil(() => Find<Button>(window, "DisconnectMidi").IsEnabled);
+            Assert.True(midi.OpenedVirtual);
+            Assert.Empty(midi.Output.Messages);
+        }
+        finally { window.Close(); }
+    }
+
     [AvaloniaFact]
     public async Task VirtualDevicePublishesWithoutSendingAndBroadcastsOnEveryChannel()
     {
@@ -302,52 +355,4 @@ public sealed class MidiRoutingTests
         Assert.True(condition(), "Timed out waiting for MIDI setup.");
     }
 
-    private sealed class FakeMidi : ISenderMidiBackend
-    {
-        public FakeInput Input { get; } = new();
-        public FakeOutput Output { get; } = new();
-        public bool FailStart { get => Input.FailStart; set => Input.FailStart = value; }
-        public bool FailSend { get => Output.FailSend; set => Output.FailSend = value; }
-        public IReadOnlyList<(string Id, string Name)> GetInputDevices() => [("controller", "Test controller")];
-        public IReadOnlyList<(int Index, string Name)> GetOutputDevices() => [(0, "Test receiver")];
-        public IMidiInputPort OpenInput(string id) => Input;
-        public IMidiOutputPort OpenOutput(int index) => Output;
-        public bool SupportsVirtualOutput { get; set; }
-        public bool OpenedVirtual { get; private set; }
-        public IMidiOutputPort OpenVirtualOutput() { OpenedVirtual = true; return Output; }
-    }
-
-    private sealed class FakeInput : IMidiInputPort
-    {
-        public bool Started { get; private set; }
-        public bool Disposed { get; private set; }
-        public bool FailStart { get; set; }
-        public event EventHandler<MidiShortMessageEventArgs>? MessageReceived;
-        public event EventHandler<MidiSysExMessageEventArgs>? SysexMessageReceived;
-        public event EventHandler<string>? ErrorReceived { add { } remove { } }
-        public void Emit(int raw) => MessageReceived?.Invoke(this, new(raw));
-        public void EmitSysEx(byte[] bytes) => SysexMessageReceived?.Invoke(this, new(bytes));
-        public void Start()
-        {
-            if (FailStart) { throw new IOException("Simulated startup failure"); }
-            Started = true;
-        }
-        public void Stop() => Started = false;
-        public void Dispose() => Disposed = true;
-    }
-
-    private sealed class FakeOutput : IMidiOutputPort
-    {
-        public List<int> Messages { get; } = [];
-        public bool FailSend { get; set; }
-        public int FailAfter { get; set; } = int.MaxValue;
-        public bool Disposed { get; private set; }
-        public void Send(int message)
-        {
-            if (FailSend || Messages.Count >= FailAfter) { throw new IOException("Simulated output failure"); }
-            Messages.Add(message);
-        }
-        public void SendBuffer(byte[] frame) => throw new InvalidOperationException("Generic sender must not send SysEx.");
-        public void Dispose() => Disposed = true;
-    }
 }
