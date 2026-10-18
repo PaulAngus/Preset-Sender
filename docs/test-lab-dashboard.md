@@ -27,8 +27,10 @@ feed. Agent restore probes accept only the bundled exact version and reject a
 missing package or a higher version, even when an alternate feed has a copy.
 
 Both platform ZIPs pass checksum, manifest, private-runtime and launcher checks.
-The signed Apple Silicon macOS 27.0.1 bundle also passes all 80 functional tests
-on the development VM. Mac native MIDI remains incomplete until its dedicated
-IAC test bus is configured. Superseded MIDI archives are removed from the bundled
-feed; the complete, exactly pinned 0.3.6 family and the agent package remain
-checked in. Local verification evidence is retained outside Git.
+The signed Apple Silicon macOS 27.0.1 bundle also passes the complete Mac All run
+on the development VM: all 80 functional tests and five literal native MIDI
+round trips through `IAC Driver PresetSender-Test`. The IAC configuration is
+persisted, with the existing default bus preserved. Superseded MIDI archives are
+removed from the bundled feed; the complete, exactly pinned 0.3.6 family and the
+agent package remain checked in. Local verification evidence is retained outside
+Git.
