@@ -1,5 +1,9 @@
 # Preset Sender automated test pilot
 
+The pilot can now be controlled by the separate `crossplatform-testing`
+dashboard. Pair the portable agent once, leave it running, then start suites
+and collect reports centrally. See [the dashboard adapter notes](test-lab-dashboard.md).
+
 Test machines must use the **prebuilt portable bundles** described in
 [packaging/pilot/README.md](../packaging/pilot/README.md). They require no installed
 .NET runtime/SDK, PowerShell or Git. The development-machine runner below remains

@@ -27,7 +27,13 @@ def main():
     parser.add_argument('--output', required=True)
     parser.add_argument('--work', required=True)
     parser.add_argument('--rid', action='append', choices=['win-x64', 'osx-arm64'])
+    parser.add_argument('--connection', help='Public dashboard-connection.json from the development PC (no pairing secrets)')
     args = parser.parse_args()
+    connection = None
+    if args.connection:
+        connection = json.loads(Path(args.connection).read_text(encoding='utf-8-sig'))
+        if set(connection) != {'server', 'certificateSha256'} or not connection['server'].startswith('https://') or len(connection['certificateSha256']) != 64:
+            raise RuntimeError('Expected public dashboard connection information only')
     output, work = Path(args.output).resolve(), Path(args.work).resolve()
     output.mkdir(parents=True, exist_ok=True)
     work.mkdir(parents=True, exist_ok=True)
@@ -66,9 +72,11 @@ def main():
                 else:
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(file, target)
-        launcher_names = ['Setup-Windows.cmd', 'Run-Windows.cmd'] if rid == 'win-x64' else ['Setup-Mac.command', 'Run-Mac.command', 'Prepare-on-Mac-DEV.command']
+        launcher_names = ['Setup-Windows.cmd', 'Run-Windows.cmd', 'Pair-with-Dashboard-Windows.cmd', 'Start-Agent-Windows.cmd'] if rid == 'win-x64' else ['Setup-Mac.command', 'Run-Mac.command', 'Prepare-on-Mac-DEV.command', 'Pair-with-Dashboard-Mac.command', 'Start-Agent-Mac.command']
         for name in launcher_names + ['START-HERE.html']:
             shutil.copy2(TEMPLATES / name, root / name)
+        if connection is not None:
+            (root / 'dashboard-connection.json').write_text(json.dumps(connection, indent=2), encoding='utf-8')
         for name in ['LICENSE', 'NOTICE']:
             if (REPO / name).exists():
                 shutil.copy2(REPO / name, root / name)
@@ -76,7 +84,8 @@ def main():
         forbidden = {'dotnet', 'dotnet.exe', 'pwsh', 'pwsh.exe', 'powershell.exe'}
         if any(p.name.lower() in forbidden for p in root.rglob('*')):
             raise RuntimeError('Forbidden SDK/PowerShell host found in target bundle')
-        files = [dict(path=p.relative_to(root).as_posix(), sha256=sha(p)) for p in sorted(root.rglob('*')) if p.is_file()]
+        # Connection data is public, replaceable deployment configuration. Pin it by transferring it through a trusted channel.
+        files = [dict(path=p.relative_to(root).as_posix(), sha256=sha(p)) for p in sorted(root.rglob('*')) if p.is_file() and p.name != 'dashboard-connection.json']
         manifest = dict(schemaVersion=1, bundleId=bundle_id, runtimeId=rid, signing='Prepare once on the Mac development VM before transfer.' if rid == 'osx-arm64' else 'Private Windows test bundle', files=files)
         (root / 'bundle-manifest.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
         archive = output / f'PresetSender-Pilot-{label}.zip'

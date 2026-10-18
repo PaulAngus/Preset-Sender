@@ -11,7 +11,7 @@
     <ApplicationIcon Condition="'$(SenderPlatform)' == 'Windows'">Assets/preset-sender.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="MightBeUseful.Midi" Version="$(SharedMidiVersion)" Condition="'$(SharedMidiSourceRoot)' == ''" />
+    <PackageReference Include="MightBeUseful.Midi" Version="$(SharedMidiPackageVersion)" Condition="'$(SharedMidiSourceRoot)' == ''" />
     <ProjectReference Include="$(SharedMidiSourceRoot)/src/MightBeUseful.Midi/MightBeUseful.Midi.csproj" Condition="'$(SharedMidiSourceRoot)' != ''" />
     <AvaloniaResource Include="Assets/preset-sender-256.png" />
     <Compile Remove="Tests/**/*.cs" />
@@ -27,7 +27,7 @@
     <!-- Managed resources avoid extracting the native API at all on legacy Windows. -->
     <EmbeddedResource Include="$(PkgWindows_Devices_Midi2)/runtimes/win-x64/native/Windows.Devices.Midi2.dll" LogicalName="PresetSender.MidiApi.Windows.Devices.Midi2.dll" />
     <EmbeddedResource Include="$(PkgWindows_Devices_Midi2)/runtimes/win-x64/native/Windows.Devices.Midi2.pri" LogicalName="PresetSender.MidiApi.Windows.Devices.Midi2.pri" />
-    <PackageReference Include="MightBeUseful.Midi.Windows" Version="$(SharedMidiVersion)" Condition="'$(SharedMidiSourceRoot)' == ''" />
+    <PackageReference Include="MightBeUseful.Midi.Windows" Version="$(SharedMidiPackageVersion)" Condition="'$(SharedMidiSourceRoot)' == ''" />
     <ProjectReference Include="$(SharedMidiSourceRoot)/src/MightBeUseful.Midi.Windows/MightBeUseful.Midi.Windows.csproj" Condition="'$(SharedMidiSourceRoot)' != ''" />
     <PackageReference Include="Avalonia.Win32" Version="11.2.3" />
   </ItemGroup>
@@ -35,7 +35,8 @@
     <RestoreAdditionalProjectSources>$(RestoreAdditionalProjectSources);$(MSBuildThisFileDirectory)packages</RestoreAdditionalProjectSources>
   </PropertyGroup>
   <ItemGroup Condition="'$(SenderPlatform)' == 'macOS'">
-    <PackageReference Include="MightBeUseful.Midi.CoreMidi" Version="$(SharedMidiVersion)" Condition="'$(SharedMidiSourceRoot)' == ''" />
+    <PackageReference Include="MightBeUseful.Midi.CoreMidi" Version="$(SharedMidiPackageVersion)" Condition="'$(SharedMidiSourceRoot)' == ''" />
+    <PackageReference Include="MightBeUseful.Midi.Rtp" Version="$(SharedMidiPackageVersion)" Condition="'$(SharedMidiSourceRoot)' == ''" />
     <ProjectReference Include="$(SharedMidiSourceRoot)/src/MightBeUseful.Midi.CoreMidi/MightBeUseful.Midi.CoreMidi.csproj" Condition="'$(SharedMidiSourceRoot)' != ''" />
     <PackageReference Include="Avalonia.Native" Version="11.2.3" />
   </ItemGroup>

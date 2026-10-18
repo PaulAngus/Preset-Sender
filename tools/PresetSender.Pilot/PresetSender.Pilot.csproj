@@ -6,14 +6,15 @@
     <AssemblyName>PresetSender.Pilot</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="MightBeUseful.Midi" Version="$(SharedMidiVersion)" />
+    <PackageReference Include="MightBeUseful.Midi" Version="$(SharedMidiPackageVersion)" />
   </ItemGroup>
   <ItemGroup Condition="'$(SenderPlatform)' == 'Windows'">
-    <PackageReference Include="MightBeUseful.Midi.Windows" Version="$(SharedMidiVersion)" />
+    <PackageReference Include="MightBeUseful.Midi.Windows" Version="$(SharedMidiPackageVersion)" />
     <PackageReference Include="FlaUI.UIA3" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup Condition="'$(SenderPlatform)' == 'macOS'">
-    <PackageReference Include="MightBeUseful.Midi.CoreMidi" Version="$(SharedMidiVersion)" />
+    <PackageReference Include="MightBeUseful.Midi.CoreMidi" Version="$(SharedMidiPackageVersion)" />
+    <PackageReference Include="MightBeUseful.Midi.Rtp" Version="$(SharedMidiPackageVersion)" />
     <Compile Remove="WindowsDesktop.cs" />
   </ItemGroup>
 </Project>

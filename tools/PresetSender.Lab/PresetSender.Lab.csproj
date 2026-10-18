@@ -8,4 +8,6 @@
     <EnableMacOSCodeSign>false</EnableMacOSCodeSign>
   </PropertyGroup>
   <ItemGroup><Using Remove="MightBeUseful.Midi" /></ItemGroup>
+  <ItemGroup Condition="'$(TestLabAgentProject)' == ''"><PackageReference Include="ApplicationTestLab.Agent" Version="[0.1.0]" /></ItemGroup>
+  <ItemGroup Condition="'$(TestLabAgentProject)' != ''"><ProjectReference Include="$(TestLabAgentProject)" /></ItemGroup>
 </Project>

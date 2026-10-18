@@ -12,6 +12,12 @@ Build both ZIPs on a development machine with Python, .NET 10 and PowerShell 7.2
 python packaging/pilot/build_portable.py --output OUTPUT_DIRECTORY --work NEW_BUILD_DIRECTORY
 ```
 
+For centrally controlled runs, add `--connection PATH_TO_DASHBOARD_CONNECTION_JSON`.
+The public connection file comes from the separate `crossplatform-testing`
+dashboard. Updated bundles include Pair-with-Dashboard and Start-Agent launchers;
+standalone Setup/Run still work. The reusable agent is pinned as a private NuGet
+package in `dependencies/test-lab`. See `docs/test-lab-dashboard.md`.
+
 When a Windows target is selected, the builder automatically prepares the
 checksum-verified private MIDI build feed before publishing. This supports fresh
 checkouts without installing a MIDI runtime. Mac-only builds skip this step and
@@ -43,11 +49,13 @@ the app's own virtual MIDI publication, and desktop tests use a unique test name
 
 The Mac ZIP is cross-built on Windows. Before transfer, run the included
 `Prepare-on-Mac-DEV.command` on the Apple Silicon Mac development VM. It codesigns
-Mach-O files, verifies signatures and updates manifest hashes through the
+Mach-O files, preserves the JIT entitlement required by the .NET apphosts,
+verifies signatures and updates manifest hashes through the
 self-contained coordinator's development-only `seal` mode. No SDK or PowerShell
 is installed. Default ad hoc signing is for private lab copies; it is not
 Developer ID notarization. Validate on the Mac development VM before copying
-the whole prepared folder to the native boots/test Macs. Test machines only use
+the whole prepared folder to the native boots/test Macs. The entitlement follows
+[Microsoft's macOS publishing guidance](https://learn.microsoft.com/en-us/dotnet/core/deploying/macos). Test machines only use
 Setup/Run. `PILOT_SIGNING_IDENTITY` optionally chooses an existing identity.
 
 Each machine writes independent results under `results/`, with a latest-report

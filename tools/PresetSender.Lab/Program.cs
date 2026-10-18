@@ -14,7 +14,7 @@ internal static class Program
 
     private static int Main(string[] args)
     {
-        try { return Run(args); }
+        try { return args.FirstOrDefault() is "pair" or "agent" ? ApplicationTestLab.PilotAgent.RunAsync(args, "preset-sender", "Preset Sender").GetAwaiter().GetResult() : Run(args); }
         catch (Exception error) { Console.Error.WriteLine(error.Message); return 1; }
     }
 
@@ -54,7 +54,9 @@ internal static class Program
         string? selectedPort = Value("--loopback");
         if (selectedPort is not null && !Dedicated(selectedPort)) { throw new ArgumentException("Select a dedicated PresetSender-Test loopback or its IAC Driver-prefixed name."); }
         string runId = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + "-" + Guid.NewGuid().ToString("N")[..6];
-        string output = Path.Combine(root, "results", runId);
+        string output = Value("--result-directory") is { } requestedOutput ? Path.GetFullPath(requestedOutput) : Path.Combine(root, "results", runId);
+        string resultsRoot = Path.GetFullPath(Path.Combine(root, "results")) + Path.DirectorySeparatorChar;
+        if (!output.StartsWith(resultsRoot, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) { throw new ArgumentException("Result directory must be inside this bundle's results folder."); }
         Directory.CreateDirectory(output);
         using var runLock = new FileStream(Path.Combine(root, "pilot-run.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         var report = new Report { Mode = mode, Suite = suite, BundleId = manifest.BundleId, Os = OperatingSystem.IsWindows() ? (Environment.OSVersion.Version.Build >= 22000 ? "Windows 11" : "Windows 10") : "macOS", OsVersion = Environment.OSVersion.Version.ToString(), Limits = Limits };
