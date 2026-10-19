@@ -2,3 +2,6 @@
 *.png binary
 *.ico binary
 *.command text eol=lf
+
+# Preserve exact bytes covered by the vendored Test Lab checksum manifest.
+dependencies/test-lab/** -text

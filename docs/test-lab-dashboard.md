@@ -34,3 +34,7 @@ persisted, with the existing default bus preserved. Superseded MIDI archives are
 removed from the bundled feed; the complete, exactly pinned 0.3.6 family and the
 agent package remain checked in. Local verification evidence is retained outside
 Git.
+
+## Multiple applications
+
+The adapter now pins agent 0.2.0. Direct Setup/Run and dashboard runs take the same machine-wide resource lease as the other application adapters. A run waits for exclusive host access before MIDI or desktop work; its agent keeps reporting that wait. Stop old agents and replace old bundles before using the multi-application dashboard. Existing per-user pairings persist. The 0.1.0 validation above describes the earlier release; new host-lock evidence is recorded in the Test Lab multi-application verification.

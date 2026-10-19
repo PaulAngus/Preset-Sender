@@ -14,16 +14,28 @@ internal static class Program
             Console.Error.WriteLine("Use: PresetSender.PortableTests functional|native RESULT_JSON");
             return 1;
         }
+#if TEST_LAB_OFFLINE_WINDOWS
+        if (args[0] != "functional") { throw new ArgumentException("Native tests are unavailable in the offline profile."); }
+#endif
         bool native = args[0] == "native";
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(args[1]))!);
+        using var progress = new StreamWriter(new FileStream(args[1] + ".progress.jsonl", FileMode.Create, FileAccess.Write, FileShare.Read)) { AutoFlush = true };
+        object progressLock = new();
+        void Progress(string phase, string name, int? total = null)
+        {
+            lock (progressLock) { progress.WriteLine(JsonSerializer.Serialize(new { phase, name, total, utc = DateTimeOffset.UtcNow })); }
+        }
         var rows = new ConcurrentQueue<object>();
         var errors = new ConcurrentQueue<object>();
         using var complete = new ManualResetEventSlim();
         using var runner = AssemblyRunner.WithoutAppDomain(typeof(PresetSender.Tests.TestApplication).Assembly.Location);
         ExecutionCompleteInfo? summary = null;
         runner.TestCaseFilter = test => test.TestMethod.TestClass.Class.Name.EndsWith(".VirtualMidiIntegrationTests", StringComparison.Ordinal) == native;
-        runner.OnTestPassed = test => rows.Enqueue(new { name = test.TestDisplayName, status = "passed", seconds = test.ExecutionTime });
-        runner.OnTestSkipped = test => rows.Enqueue(new { name = test.TestDisplayName, status = "skipped", reason = test.SkipReason });
-        runner.OnTestFailed = test => rows.Enqueue(new { name = test.TestDisplayName, status = "failed", error = test.ExceptionMessage, stack = test.ExceptionStackTrace });
+        runner.OnDiscoveryComplete = result => Progress("discovered", "", result.TestCasesToRun);
+        runner.OnTestStarting = test => Progress("started", test.TestDisplayName);
+        runner.OnTestPassed = test => { rows.Enqueue(new { name = test.TestDisplayName, status = "passed", seconds = test.ExecutionTime }); Progress("passed", test.TestDisplayName); };
+        runner.OnTestSkipped = test => { rows.Enqueue(new { name = test.TestDisplayName, status = "skipped", reason = test.SkipReason }); Progress("skipped", test.TestDisplayName); };
+        runner.OnTestFailed = test => { rows.Enqueue(new { name = test.TestDisplayName, status = "failed", error = test.ExceptionMessage, stack = test.ExceptionStackTrace }); Progress("failed", test.TestDisplayName); };
         runner.OnErrorMessage = error => errors.Enqueue(error);
         runner.OnExecutionComplete = result => { summary = result; complete.Set(); };
         runner.Start(new AssemblyRunnerStartOptions { Parallel = false, PreEnumerateTheories = true });

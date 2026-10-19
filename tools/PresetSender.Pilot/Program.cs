@@ -70,31 +70,44 @@ internal static class Program
 
     private static async Task LoopbackAsync(Options options)
     {
-        string name = options.Required("port");
-        var inputs = Backend.GetInputDevices().Where(p => p.Name == name).ToArray();
-        var outputs = Backend.GetOutputDevices().Where(p => p.Name == name).ToArray();
-        if (inputs.Length != 1 || outputs.Length != 1) { throw new IOException("Choose a uniquely named test loopback input/output pair."); }
-        using var input = Backend.OpenInput(inputs[0].Id);
-        using var output = Backend.OpenOutput(outputs[0].Index);
-        var messages = Channel.CreateUnbounded<int>();
-        input.MessageReceived += (_, e) => messages.Writer.TryWrite(e.RawMessage);
-        input.ErrorReceived += (_, e) => messages.Writer.TryComplete(new IOException(e));
-        input.Start();
-        var received = new List<object>();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        string resultPath = options.Required("result");
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(resultPath))!);
+        using var progress = new StreamWriter(new FileStream(resultPath + ".progress.jsonl", FileMode.Create, FileAccess.Write, FileShare.Read)) { AutoFlush = true };
+        void Progress(string phase, string name, int? total = null) => progress.WriteLine(JsonSerializer.Serialize(new { phase, name, total, utc = DateTimeOffset.UtcNow }));
+        Progress("discovered", "", 5);
+        string currentCheck = "Open the explicitly selected existing test connection";
         try
         {
-            // Literal wire vectors, independent of the application encoder.
-            foreach (int message in new[] { 0x00c0, 0x2ac5, 0x7fcf, 0x643c92, 0x003c82 })
+            string name = options.Required("port");
+            var inputs = Backend.GetInputDevices().Where(p => p.Name == name).ToArray();
+            var outputs = Backend.GetOutputDevices().Where(p => p.Name == name).ToArray();
+            if (inputs.Length != 1 || outputs.Length != 1) { throw new IOException("Choose a uniquely named test loopback input/output pair."); }
+            using var input = Backend.OpenInput(inputs[0].Id);
+            using var output = Backend.OpenOutput(outputs[0].Index);
+            var messages = Channel.CreateUnbounded<int>();
+            input.MessageReceived += (_, e) => messages.Writer.TryWrite(e.RawMessage);
+            input.ErrorReceived += (_, e) => messages.Writer.TryComplete(new IOException(e));
+            input.Start();
+            var received = new List<object>();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            try
             {
-                output.Send(message);
-                int actual = await messages.Reader.ReadAsync(timeout.Token);
-                if (actual != message) { throw new IOException($"Expected {Hex(message)}, received {Hex(actual)}."); }
-                received.Add(new { utc = DateTimeOffset.UtcNow, raw = actual, hex = Hex(actual) });
+                // Literal wire vectors, independent of the application encoder.
+                foreach (int message in new[] { 0x00c0, 0x2ac5, 0x7fcf, 0x643c92, 0x003c82 })
+                {
+                    currentCheck = "Literal round trip: " + Hex(message);
+                    Progress("started", currentCheck);
+                    output.Send(message);
+                    int actual = await messages.Reader.ReadAsync(timeout.Token);
+                    if (actual != message) { throw new IOException($"Expected {Hex(message)}, received {Hex(actual)}."); }
+                    received.Add(new { utc = DateTimeOffset.UtcNow, raw = actual, hex = Hex(actual) });
+                    Progress("passed", currentCheck);
+                }
+                await File.WriteAllTextAsync(resultPath, JsonSerializer.Serialize(new { status = "passed", total = received.Count, failed = 0, skipped = 0, port = name, received }, JsonOptions));
             }
-            await File.WriteAllTextAsync(options.Required("result"), JsonSerializer.Serialize(new { status = "passed", port = name, received }, JsonOptions));
+            finally { input.Stop(); }
         }
-        finally { input.Stop(); }
+        catch { Progress("failed", currentCheck); throw; }
     }
 
     internal static string Hex(int message)

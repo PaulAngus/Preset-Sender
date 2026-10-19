@@ -14,6 +14,20 @@ internal interface ISenderMidiBackend
     IMidiOutputPort OpenVirtualOutput();
 }
 
+#if TEST_LAB_OFFLINE_WINDOWS
+// Compiled only into the audited offline test build. Never touches a native backend.
+internal sealed class NativeMidiBackend : ISenderMidiBackend
+{
+    public void RefreshCapabilities() { }
+    public IReadOnlyList<(string Id, string Name)> GetInputDevices() => [];
+    public IReadOnlyList<(int Index, string Name)> GetOutputDevices() => [];
+    public bool SupportsVirtualOutput => false;
+    public IMidiInputPort OpenInput(string id) => throw Disabled();
+    public IMidiOutputPort OpenOutput(int index) => throw Disabled();
+    public IMidiOutputPort OpenVirtualOutput() => throw Disabled();
+    private static InvalidOperationException Disabled() => new("The offline test profile prohibits native MIDI access.");
+}
+#else
 internal sealed class NativeMidiBackend : ISenderMidiBackend
 {
     public void RefreshCapabilities()
@@ -60,3 +74,5 @@ internal sealed class NativeMidiBackend : ISenderMidiBackend
     public IMidiOutputPort OpenVirtualOutput() => throw new PlatformNotSupportedException("Built-in virtual output currently requires Windows MIDI Services.");
 #endif
 }
+
+#endif

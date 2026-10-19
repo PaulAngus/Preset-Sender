@@ -42,6 +42,8 @@ def main():
         subprocess.run(['pwsh', '-NoProfile', '-File', str(REPO / 'Initialize-MidiSdk.ps1')], cwd=REPO, check=True)
     source_paths = sorted(set(p.decode('utf-8') for p in git('ls-files', '-z', '--cached', '--others', '--exclude-standard').split(b'\0') if p))
     source = dict(head=git('rev-parse', 'HEAD').decode().strip(), workingTree=git('status', '--porcelain').decode().splitlines(), files=[dict(path=p, sha256=sha(REPO / p)) for p in source_paths if (REPO / p).is_file()])
+    source['cleanBuild'] = True
+    source['buildOutputs'] = 'Fresh per-bundle and per-publish artifacts directories; no previous bin/obj outputs reused.'
     bundle_id = datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S') + '-' + uuid.uuid4().hex[:6]
     for rid in rids:
         label = 'Windows' if rid.startswith('win-') else 'Mac'

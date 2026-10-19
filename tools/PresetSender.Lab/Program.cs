@@ -59,6 +59,10 @@ internal static class Program
         if (!output.StartsWith(resultsRoot, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) { throw new ArgumentException("Result directory must be inside this bundle's results folder."); }
         Directory.CreateDirectory(output);
         using var runLock = new FileStream(Path.Combine(root, "pilot-run.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        File.WriteAllText(Path.Combine(output, "resource-state.json"), "{\"phase\":\"waiting\"}");
+        using var hostWait = new CancellationTokenSource(TimeSpan.FromHours(2));
+        using var hostLease = ApplicationTestLab.HostResourceLease.AcquireAsync(hostWait.Token).GetAwaiter().GetResult();
+        File.WriteAllText(Path.Combine(output, "resource-state.json"), "{\"phase\":\"running\"}");
         var report = new Report { Mode = mode, Suite = suite, BundleId = manifest.BundleId, Os = OperatingSystem.IsWindows() ? (Environment.OSVersion.Version.Build >= 22000 ? "Windows 11" : "Windows 10") : "macOS", OsVersion = Environment.OSVersion.Version.ToString(), Limits = Limits };
         var environment = new Dictionary<string, string?>
         {
@@ -171,6 +175,13 @@ internal static class Program
         {
             var stage = new StageResult { Name = name };
             report.Stages.Add(stage);
+            int plannedStages = 1 + (mode != "check" && suite is "All" or "Functional" ? 1 : 0)
+                + (mode != "check" && suite is "All" or "Native" ? 1 : 0)
+                + (mode != "check" && (suite == "Desktop" || suite == "All" && OperatingSystem.IsWindows()) ? 1 : 0);
+            string resultName = name == "native-midi" ? (selectedPort is null ? "native" : "loopback") : name;
+            string progressResult = name == "desktop" ? Path.Combine(output, "desktop", "desktop.json") : Path.Combine(output, resultName + ".json");
+            using var progress = new ApplicationTestLab.StageProgress(output, progressResult,
+                name, report.Stages.Count, plannedStages, true);
             var timer = Stopwatch.StartNew();
             Console.WriteLine(name + ": running...");
             try { stage.Details = action(); stage.Status = "passed"; }

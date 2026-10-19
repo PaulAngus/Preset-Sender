@@ -140,3 +140,16 @@ the run folder's `report.*`, `source.json`, `*.txt`, `functional/`, `native/`,
 executables need not be uploaded. Use interactive user sessions for desktop
 jobs; functional jobs can run without an unlocked desktop. No automation or
 self-hosted runner is installed by this script.
+
+## Desktop keyboard synchronization
+
+The desktop driver activates its own title bar when Windows denies a background
+agent foreground activation, waits for the test window to own the foreground, and verifies
+that closing configuration restores focus to Configure. It sends a press/release
+pair for each physical digit key, waits for the displayed entry after each digit,
+and releases Enter after confirmation. It fails explicitly if the foreground is
+lost before sending keys; it never retries a potentially delivered MIDI command.
+This preserves the product's existing focus behavior from
+[Fluent dialog guidance](https://fluent2.microsoft.design/components/web/react/core/dialog/usage/).
+FlaUI's [keyboard API](https://github.com/FlaUI/FlaUI/blob/v5.0.0/src/FlaUI.Core/Input/Keyboard.cs)
+distinguishes `Press` (held key) from `Type` (press and release).

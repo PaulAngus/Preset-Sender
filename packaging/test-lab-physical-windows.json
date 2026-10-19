@@ -1,0 +1,68 @@
+{
+  "applicationId": "preset-sender",
+  "applicationName": "Preset Sender",
+  "testProfile": "physical-windows-fm9-read-only",
+  "runner": {
+    "project": "tools/PresetSender.Lab/PresetSender.Lab.csproj",
+    "destination": "bin/lab",
+    "executable": "bin/lab/PresetSender.Lab"
+  },
+  "platforms": {
+    "win": {
+      "properties": [
+        "-p:TestLabProfile=PhysicalWindowsReadOnly"
+      ],
+      "tests": [
+        {
+          "project": "tools/PresetSender.PortableTests/PresetSender.PortableTests.csproj",
+          "destination": "bin/tests"
+        },
+        {
+          "project": "tools/PresetSender.Fm9Checks/PresetSender.Fm9Checks.csproj",
+          "destination": "bin/hardware"
+        }
+      ]
+    }
+  },
+  "offlinePolicy": {
+    "includedTestSources": [
+      "Tests/SenderTests.cs",
+      "Tests/ConfigurationTests.cs",
+      "Tests/MainScreenTests.cs",
+      "Tests/MidiRoutingTests.cs",
+      "Tests/PilotTests.cs",
+      "Tests/OfflineMidiBoundaryTests.cs",
+      "Tests/Support/CapturedMidiBackend.cs"
+    ],
+    "excludedWorkflows": [
+      "VirtualMidiIntegrationTests (not compiled)",
+      "Pilot native/desktop driver (not packaged)",
+      "Native device discovery, MIDI opens and virtual-port creation (compiled boundary refuses all access)"
+    ],
+    "midiAccess": "none",
+    "hardwareQualification": false,
+    "allScope": "Functional stages only; separate read-only FM9 Native stage in hardware-policy.json."
+  },
+  "hardwarePolicy": {
+    "midiAccess": "four-exact-fm9-read-queries",
+    "includedSources": [
+      "tools/PresetSender.Fm9Checks/Program.cs",
+      "tools/PresetSender.Fm9Checks/PresetSender.Fm9Checks.csproj",
+      "tools/PresetSender.Lab/PhysicalProgram.cs",
+      "dependencies/test-lab/Fm9ReadOnly.cs",
+      "dependencies/test-lab/Fm9SharedTransport.cs",
+      "packaging/fm9-read-only.json",
+      "dependencies/test-lab/fm9-query-provenance.json",
+      "Platforms/Windows/MidiBackend.cs"
+    ],
+    "virtualPortsAllowed": false,
+    "networkMidiAllowed": false,
+    "desktopCoverage": false,
+    "scope": "Production transport interoperability, read-only FM9 identity/firmware/current state; no sending/routing qualification."
+  },
+  "staticFiles": {
+    "packaging/fm9-read-only.json": "fm9-read-only.json",
+    "dependencies/test-lab/fm9-query-provenance.json": "fm9-query-provenance.json"
+  },
+  "agentVersion": "0.2.5"
+}

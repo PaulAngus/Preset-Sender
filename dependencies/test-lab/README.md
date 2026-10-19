@@ -1,13 +1,5 @@
-# Application Test Lab agent
+# Application Test Lab 0.2.5
 
-Pinned private NuGet dependency, produced by the separate `crossplatform-testing` repository. The self-contained `PresetSender.Lab` host embeds this library; test machines need no separate runtime or tooling installation. See `packages.sha256` for the package digest.
+The pinned path-mapped agent package and build helpers come from crossplatform-testing. Normal builds require no neighbouring checkout. SHA256SUMS records the exact bytes. The package supports the host resource lease, live per-case/output progress and approved Mac driver preservation. No MIDI topology or test selection is changed by progress reporting.
 
-The reviewed agent source is recorded in [Test Lab commit c988bdc](https://github.com/PaulAngus/crossplatform-testing/commit/c988bdcb146fc00ac91af760f45ac5c6030b0464).
-
-The host uses the exact NuGet range `[0.1.0]`. Source mapping resolves
-`ApplicationTestLab.Agent` only from this checked-in feed, so a missing package
-fails restoration instead of falling back to a public feed or another version.
-
-Rebuild a new version in the Test Lab repository with `dotnet pack src/ApplicationTestLab.Agent -c Release -o artifacts/packages`, then copy the versioned package here and update the exact version in the Lab project. Sender builds do not require a sibling repository checkout. Preserve package-version immutability.
-
-Pairing and agent launchers are part of the portable pilot ZIPs. Application-specific test logic, MIDI routing and reports remain in this repository. The dashboard server and reusable transport code live in the separate Test Lab repository.
+Only the current distributable package is included. Older packages remain in deployment evidence; released package versions are never rewritten.

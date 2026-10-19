@@ -1,5 +1,7 @@
 # Preset Sender
 
+Current source release: [0.1.4](docs/releases/0.1.4.md).
+
 Version 0.1.3 restores standalone Windows packaging: the EXE contains both native Windows MIDI API files and automatically extracts verified copies into its own cache on Windows 11 25H2 or later. No separate MIDI API installer, companion files, runtime download or .NET installation is needed. Windows 10 uses hardware MIDI or user-installed loopMIDI; the bundled API is never extracted or loaded there. Compatible Windows MIDI Services must still be available for built-in virtual MIDI. Backend selection and extraction diagnostics are recorded at `%LOCALAPPDATA%\PresetSender\midi-backend.log`.
 
 Shared MIDI implementation: see [dependency and setup notes](dependencies/midi/README.md). Current and legacy backends come from the `MightBeUseful.Midi` packages maintained in [MIDIHelperLibrary](https://github.com/PaulAngus/MIDIHelperLibrary); earlier implementation/package details below describe the pre-migration builds.
@@ -155,3 +157,18 @@ for the reports, isolated settings and setup on Windows 10/11 and macOS.
 The selected **Amber Gradient** logo appears in the window/executable icon: an amber-to-orange effects pedal with a dark forwarding arrow and shaded footswitch. Website-ready transparent PNGs and a favicon are in [Branding/Website](Branding/Website/README.md). The executable's multi-resolution icon is `Assets/preset-sender.ico`; the selected original is retained under [Branding/NewOptions/PedalGradients](Branding/NewOptions/PedalGradients/README.md). Re-export sizes on Windows with `Branding/Export-BrandAssets.ps1` before building if the source artwork changes.
 
 On 14 October 2026, the former DIN Send socket mark was assigned to the sibling MIDI Forwarder utility, and the user selected Amber Gradient for this preset app. [The logo exploration](Branding/NewOptions/README.md) retains the ten starting concepts, colour studies and gradient refinements.
+
+## Offline Windows Test Lab profile
+
+Build an audited bundle without MIDI access:
+
+```text
+python packaging/build_test_lab.py --rid win-x64 --config packaging/test-lab-offline-windows.json --output artifacts/offline-windows
+```
+
+Every bundle uses fresh build outputs and records its selected test-source hashes in
+`offline-policy.json`. All covers only the profile's offline Functional stages.
+Native and interactive Desktop requests report unavailable; no hardware or MIDI
+routing qualification is implied. No native, virtual, TCP or UDP MIDI connections
+are opened or created. In-memory logic fixtures remain included. The normal
+development profile and its broader transport tests remain separate.

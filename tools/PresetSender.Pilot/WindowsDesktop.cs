@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
@@ -12,6 +13,10 @@ namespace PresetSender.Pilot;
 
 internal static class WindowsDesktop
 {
+    [DllImport("user32.dll", ExactSpelling = true)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static extern nint GetForegroundWindow();
+
     private static readonly int[] FirstMessage = [0x2ac5];
     private static readonly string[] CoverageLimits = ["Tool-launched packaged application; Explorer launch and physical device behaviour are separate checks."];
     public static void Run(Options options)
@@ -73,11 +78,23 @@ internal static class WindowsDesktop
                 Find(configuration, "OutputChannel").AsComboBox().Select(0);
                 Invoke(configuration, "SaveConfiguration");
                 Wait(() => FindConfiguration() is null, "configuration to close");
-                window!.Focus();
-                Keyboard.Type("127"); Keyboard.Press(VirtualKeyShort.RETURN);
+                FocusMainWindow();
+                Wait(() => Find(window!, "OpenConfiguration").Properties.HasKeyboardFocus.Value,
+                    "keyboard focus to return to Configure");
+                foreach (var (key, display) in new[]
+                {
+                    (VirtualKeyShort.KEY_1, "001"), (VirtualKeyShort.KEY_2, "012"), (VirtualKeyShort.KEY_7, "127")
+                })
+                {
+                    RequireForeground();
+                    Keyboard.Type(key);
+                    Wait(() => Find(window!, "ProgramDisplay").Name == display, "keyboard entry " + display);
+                }
+                RequireForeground();
+                Keyboard.Type(VirtualKeyShort.RETURN); // Type releases the key as well as pressing it.
                 Wait(() => ReadMessages(firstTrace).Count >= 17, "all-channel program changes");
                 AssertMessages(firstTrace, FirstMessage.Concat(Enumerable.Range(0, 16).Select(i => 0x7fc0 | i)).ToArray());
-                Capture.Element(window).ToFile(Path.Combine(directory, "desktop-sent.png"));
+                Capture.Element(window!).ToFile(Path.Combine(directory, "desktop-sent.png"));
             });
             StopReceiver(); CloseApplication();
             if (virtualOutput) { Wait(() => Backend.GetInputDevices().All(p => p.Name != port), "virtual port cleanup"); }
@@ -164,8 +181,30 @@ internal static class WindowsDesktop
             var application = Application.Attach(applicationProcess.Id);
             applications.Add(application);
             Wait(() => (window = application.GetMainWindow(automation)) is not null, "main window");
+            FocusMainWindow();
+            _ = Find(window!, "OpenConfiguration");
+        }
+
+        void FocusMainWindow()
+        {
             window!.Focus();
-            _ = Find(window, "OpenConfiguration");
+            if (GetForegroundWindow() != window.Properties.NativeWindowHandle.Value)
+            {
+                // Windows can deny SetForegroundWindow to a background agent.
+                // Activate through the title bar, like a user, without invoking a keypad button.
+                var titleBar = window.TitleBar ?? throw new IOException("The test window has no accessible title bar for activation.");
+                titleBar.Click();
+            }
+            Wait(() => GetForegroundWindow() == window.Properties.NativeWindowHandle.Value,
+                "test application's foreground window (desktop must be unlocked and idle)");
+        }
+
+        void RequireForeground()
+        {
+            if (GetForegroundWindow() != window!.Properties.NativeWindowHandle.Value)
+            {
+                throw new IOException("The test application lost the foreground before keyboard input. Keep the test desktop unlocked and idle.");
+            }
         }
 
         Window OpenConfiguration()

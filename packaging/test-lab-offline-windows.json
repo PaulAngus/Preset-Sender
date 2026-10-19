@@ -1,0 +1,43 @@
+{
+  "applicationId": "preset-sender",
+  "applicationName": "Preset Sender",
+  "testProfile": "offline-windows-no-midi",
+  "runner": {
+    "project": "tools/PresetSender.Lab/PresetSender.Lab.csproj",
+    "destination": "bin/lab",
+    "executable": "bin/lab/PresetSender.Lab"
+  },
+  "platforms": {
+    "win": {
+      "properties": [
+        "-p:TestLabProfile=OfflineWindows"
+      ],
+      "tests": [
+        {
+          "project": "tools/PresetSender.PortableTests/PresetSender.PortableTests.csproj",
+          "destination": "bin/tests"
+        }
+      ]
+    }
+  },
+  "offlinePolicy": {
+    "includedTestSources": [
+      "Tests/SenderTests.cs",
+      "Tests/ConfigurationTests.cs",
+      "Tests/MainScreenTests.cs",
+      "Tests/MidiRoutingTests.cs",
+      "Tests/PilotTests.cs",
+      "Tests/OfflineMidiBoundaryTests.cs",
+      "Tests/Support/CapturedMidiBackend.cs"
+    ],
+    "excludedWorkflows": [
+      "VirtualMidiIntegrationTests (not compiled)",
+      "Pilot native/desktop driver (not packaged)",
+      "Native device discovery, MIDI opens and virtual-port creation (compiled boundary refuses all access)"
+    ],
+    "midiAccess": "none",
+    "hardwareQualification": false,
+    "allScope": "Only the audited offline Functional stages; Native/Desktop explicitly unavailable."
+  },
+  "agentVersion": "0.2.5"
+}

@@ -11,10 +11,19 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../PresetSender.csproj" />
-    <Compile Include="../../Tests/**/*.cs" Exclude="../../Tests/bin/**;../../Tests/obj/**" />
+    <Compile Include="../../Tests/**/*.cs" Exclude="../../Tests/bin/**;../../Tests/obj/**" Condition="'$(TestLabProfile)' != 'OfflineWindows' and '$(TestLabProfile)' != 'PhysicalWindowsReadOnly'" />
     <PackageReference Include="Avalonia.Headless.XUnit" Version="11.2.3" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.utility" Version="2.9.3" />
     <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup Condition="('$(TestLabProfile)' == 'OfflineWindows' or '$(TestLabProfile)' == 'PhysicalWindowsReadOnly')">
+    <Compile Include="../../Tests/SenderTests.cs" />
+    <Compile Include="../../Tests/ConfigurationTests.cs" />
+    <Compile Include="../../Tests/MainScreenTests.cs" />
+    <Compile Include="../../Tests/MidiRoutingTests.cs" />
+    <Compile Include="../../Tests/PilotTests.cs" />
+    <Compile Include="../../Tests/OfflineMidiBoundaryTests.cs" />
+    <Compile Include="../../Tests/Support/CapturedMidiBackend.cs" />
   </ItemGroup>
 </Project>

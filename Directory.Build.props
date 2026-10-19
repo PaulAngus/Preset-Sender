@@ -9,4 +9,5 @@
   <Import Project="build/DesktopPlatform.props" />
   <ItemGroup><Using Include="MightBeUseful.Midi" /></ItemGroup>
   <Import Project="dependencies/midi/MidiVersion.props" />
+  <PropertyGroup Condition="('$(TestLabProfile)' == 'OfflineWindows' or '$(TestLabProfile)' == 'PhysicalWindowsReadOnly')"><DefineConstants>$(DefineConstants);TEST_LAB_OFFLINE_WINDOWS</DefineConstants></PropertyGroup>
 </Project>
