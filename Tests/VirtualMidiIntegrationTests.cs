@@ -71,7 +71,7 @@ public sealed class VirtualMidiIntegrationTests
         await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Equal(0, process.ExitCode);
         Assert.Contains(missingDirectory, output, StringComparison.Ordinal);
-        Assert.Contains("Initialize-SharedMidi.ps1", output, StringComparison.Ordinal);
+        Assert.Contains("MBU_MIDI_API_DIRECTORY", output, StringComparison.Ordinal);
         Assert.DoesNotContain("Class not registered", output, StringComparison.Ordinal);
     }
 

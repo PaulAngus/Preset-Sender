@@ -15,6 +15,11 @@ internal static class Program
     {
 #if SENDER_WINDOWS
         BundledMidiApi.Prepare();
+        if (args.Contains("--dependency-report", StringComparer.Ordinal))
+        {
+            Environment.ExitCode = MightBeUseful.Midi.Windows.WindowsMidiDependencyReport.Write(Console.Out);
+            return;
+        }
 #endif
         if (args.Contains("--diagnostics-json", StringComparer.Ordinal))
         {

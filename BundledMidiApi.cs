@@ -47,6 +47,7 @@ internal static class BundledMidiApi
             using (var output = File.Create(temporary)) { resource.CopyTo(output); }
             try { File.Move(temporary, destination, overwrite: true); }
             catch (IOException) when (Matches(destination, expected)) { } // Another instance extracted first.
+            catch (UnauthorizedAccessException) when (Matches(destination, expected)) { } // Another instance already loaded it.
         }
         finally { if (File.Exists(temporary)) { File.Delete(temporary); } }
     }

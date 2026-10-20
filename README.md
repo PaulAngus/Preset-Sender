@@ -14,7 +14,7 @@ A compact MIDI Program Change utility with its own settings, tests, branding and
 
 ## Use
 
-On Windows, copy just `PresetSender.exe` to the other PC and launch it. The executable includes the .NET runtime and Windows MIDI API components; it automatically unpacks them into the runtime's per-user cache. No companion files or application installer are required. Windows MIDI Services must still be available for the built-in virtual output.
+On Windows, copy just `PresetSender.exe` to the other PC and launch it. The executable includes the .NET runtime, Windows MIDI API components and the API’s required private Visual C++ libraries; it automatically unpacks them into the runtime's per-user cache. No companion files or application installer are required. Windows MIDI Services must still be available for the built-in virtual output.
 
 1. Open `PresetSender.exe`, then click **Configure**. In **MIDI Connection**, select **Preset Sender (virtual device)** to publish an input that other apps on this PC can receive from. Click **Connect**, then select **Preset Sender** in the receiving app's MIDI input list. Alternatively, select an existing hardware or virtual output. An input controller is optional; the computer keyboard needs none. Connecting sends no program changes (virtual MIDI protocol discovery happens automatically). Connection settings and **Disconnect** remain visible.
 2. In Configure → **Additional options**, set **Output channel** to a single channel (1–16) or **All channels**, and choose **Preset numbering**. All channels sends the same Program Change once on each of the 16 channels. This is the sending equivalent of the requested omni option; MIDI's formal Omni mode is a receiver setting. A receiver listening to all channels may process the change 16 times, so prefer a single channel for that receiver. The default is channel 1 and zero-based numbering: displayed `42` sends MIDI PC 42. One-based numbering sends PC 41 for displayed `42`.
@@ -29,7 +29,7 @@ Computer keyboard entry works while this utility is focused, with focus in the k
 
 ## loopMIDI setup on older Windows
 
-Use this to send Program Change messages to another application on a supported Windows version when the built-in virtual publisher is unavailable. The shared library normally chooses its legacy MIDI backend automatically on older Windows. This route needs loopMIDI's driver, but does not need Windows MIDI Services or the optional current API installer.
+Use this to send Program Change messages to another application on a supported Windows version when the built-in virtual publisher is unavailable. The shared library normally chooses its legacy MIDI backend automatically on older Windows. This optional route needs loopMIDI's driver. It is outside the supported Windows 10 virtual-presentation workflow; direct hardware MIDI needs no loopMIDI or API installer.
 
 1. Download and install [loopMIDI from Tobias Erichsen](https://www.tobias-erichsen.de/software/loopmidi.html), then start it on the same PC as Preset Sender and the receiving application.
 2. Create one port named `Preset Sender To App`.
@@ -172,3 +172,17 @@ Native and interactive Desktop requests report unavailable; no hardware or MIDI
 routing qualification is implied. No native, virtual, TCP or UDP MIDI connections
 are opened or created. In-memory logic fixtures remain included. The normal
 development profile and its broader transport tests remain separate.
+
+## Supported releases and Mac distribution
+
+Support policy: Windows 10, Windows 11, macOS 26 and macOS 27. Windows builds
+are x64; Mac build targets are arm64 and x64. Virtual MIDI presentation is not
+supported on Windows 10. Existing hardware MIDI remains supported there.
+
+Developers run `Publish-Mac.ps1 -Architecture arm64` (or `x64`) on the signing
+VM. It builds a fresh self-contained app, signs native components and then
+archives the result. Use Developer ID `-SigningIdentity` and `-NotaryProfile`
+for a public release. Cross-build output is marked as signing input only.
+End users install the signed Preset Sender.app and run it; no .NET, Homebrew,
+PowerShell, setup script or separate native library installation is required.
+Clean-machine execution and full product workflow coverage remain separate gates.
