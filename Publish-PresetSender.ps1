@@ -19,4 +19,8 @@ dotnet publish $taskProject -c Release -r win-x64 --self-contained true --artifa
 if ($LASTEXITCODE -ne 0) { throw "Preset Sender publish failed with exit code $LASTEXITCODE." }
 & $signScript @signing -ExecutablePath (Join-Path $taskOutput 'PresetSender.exe')
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.md') -Destination (Join-Path $taskOutput 'README.md')
+& (Join-Path $PSScriptRoot 'dependencies/midi/New-WindowsReleaseArchive.ps1') `
+    -ExecutablePath (Join-Path $taskOutput 'PresetSender.exe') -Name 'Preset-Sender' -OutputDirectory $taskOutput `
+    -NoticePath @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'dependencies/midi') -File |
+        Where-Object Name -Match 'LICENSE|NOTICES' | ForEach-Object FullName)
 Write-Output (Join-Path $taskOutput 'PresetSender.exe')
