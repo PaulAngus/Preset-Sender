@@ -42,7 +42,7 @@ public sealed class MainScreenTests
             channel.IsDropDownOpen = true; Pump(); Press(configuration, PhysicalKey.Escape);
             Assert.True(configuration.IsVisible); Assert.False(channel.IsDropDownOpen);
             Click(Find<Button>(configuration, "SaveConfiguration")); Assert.False(configuration.IsVisible); Assert.True(configure.IsFocused);
-            owner.Execute("Send"); Assert.Equal(new[] { 0xc5 | (42 << 8) }, writes);
+            owner.Execute("Send"); Assert.Equal(new[] { 0xb5, 0xc5 | (42 << 8) }, writes);
             Click(Find<Button>(owner, "NextProgram")); Assert.Equal(0xc5 | (43 << 8), writes[^1]);
             Click(Find<Button>(owner, "PrevProgram")); Assert.Equal(0xc5 | (42 << 8), writes[^1]);
             Click(Find<Button>(owner, "LastProgram")); Assert.Equal(0xc5 | (43 << 8), writes[^1]);
@@ -64,9 +64,45 @@ public sealed class MainScreenTests
             window.Execute("Last"); Assert.Empty(writes);
             window.Execute("Prev"); Assert.Equal(0xc0 | (127 << 8), writes[^1]);
             window.Execute("Next"); Assert.Equal(0xc0, writes[^1]);
-            fail = true; window.Execute("Next"); Assert.Equal(2, writes.Count);
+            fail = true; window.Execute("Next"); Assert.Equal(4, writes.Count);
             fail = false; window.Execute("Last"); Assert.Equal(0xc0 | (127 << 8), writes[^1]);
             window.Execute("Last"); Assert.Equal(0xc0, writes[^1]);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaTheory]
+    [InlineData("Next", false)]
+    [InlineData("Prev", false)]
+    [InlineData("Last", false)]
+    [InlineData("Next", true)]
+    [InlineData("Prev", true)]
+    [InlineData("Last", true)]
+    public void UnsuccessfulNavigationPreservesPendingEntry(string command, bool sendFailure)
+    {
+        bool fail = false;
+        var writes = new List<int>();
+        Action<int>? send = sendFailure ? message => { if (fail) { throw new IOException("Simulated failure"); } writes.Add(message); } : null;
+        var window = new SenderWindow(true, send);
+        window.Show(); Pump();
+        try
+        {
+            if (sendFailure)
+            {
+                window.Execute("2"); window.Execute("Send");
+                window.Execute("3"); window.Execute("Send");
+                fail = true;
+            }
+            window.Execute("4"); window.Execute("2");
+            int previousWrites = writes.Count;
+            window.Execute(command);
+            Assert.Equal(previousWrites, writes.Count);
+            Assert.Equal("042", Find<TextBlock>(window, "ProgramDisplay").Text);
+            if (sendFailure)
+            {
+                fail = false; window.Execute("Send");
+                Assert.Equal(0xc0 | (42 << 8), writes[^1]);
+            }
         }
         finally { window.Close(); }
     }

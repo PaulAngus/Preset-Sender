@@ -166,11 +166,10 @@ public sealed partial class SenderWindow : Window
                 _status.Text = $"Enter a preset from {_state.NumberingOffset} to {127 + _state.NumberingOffset}.";
             }
         }
-        else if (command == "Next") { _state.Clear(); Send(_state.LastProgram is int current ? (current + 1) % 128 : 0); }
-        else if (command == "Prev") { _state.Clear(); Send(_state.LastProgram is int current ? (current + 127) % 128 : 127); }
+        else if (command == "Next") { Send(_state.LastProgram is int current ? (current + 1) % 128 : 0); }
+        else if (command == "Prev") { Send(_state.LastProgram is int current ? (current + 127) % 128 : 127); }
         else if (command == "Last")
         {
-            _state.Clear();
             if (_state.PreviousProgram is int previous) { Send(previous); }
             else { _status.Text = "No previous preset to return to."; }
         }
@@ -188,10 +187,16 @@ public sealed partial class SenderWindow : Window
             int lastChannel = _state.OutputChannel == 0 ? 16 : _state.OutputChannel;
             for (int channel = firstChannel; channel <= lastChannel; channel++)
             {
-                int message = MidiMessageEncoding.ProgramChange(program, channel);
-                if (_testSend is not null) { _testSend(message); }
-                else { _outputPort!.Send(message); }
-                LogMidi("Out", message); sentCount++;
+                // Entries address bank 0. Select it on every request so a receiver's
+                // previous bank (including forwarded bank changes) cannot offset the preset.
+                int bankSelect = 0xb0 | (channel - 1); // CC#0, value 0, on the same channel as the PC.
+                foreach (int message in new[] { bankSelect, MidiMessageEncoding.ProgramChange(program, channel) })
+                {
+                    if (_testSend is not null) { _testSend(message); }
+                    else { _outputPort!.Send(message); }
+                    LogMidi("Out", message);
+                }
+                sentCount++;
             }
 
             _state.Sent(program);
@@ -295,7 +300,16 @@ public sealed partial class SenderWindow : Window
         {
             await Task.Run(() =>
             {
-                openedOutput = output.IsVirtual ? _backend.OpenVirtualOutput() : _backend.OpenOutput(output.Index);
+                if (output.IsVirtual) { openedOutput = _backend.OpenVirtualOutput(); }
+                else
+                {
+                    // Device indices can change after unplugging or adding a port.
+                    // Resolve the selected name again rather than opening its old slot.
+                    int? currentIndex = _backend.GetOutputDevices().Where(port => port.Name == output.Name)
+                        .Skip(output.Occurrence).Select(port => (int?)port.Index).FirstOrDefault();
+                    if (currentIndex is null) { throw new IOException($"MIDI output {output.Name} is no longer available. Refresh devices and select an output."); }
+                    openedOutput = _backend.OpenOutput(currentIndex.Value);
+                }
                 if (inputId is not null)
                 {
                     openedInput = _backend.OpenInput(inputId);

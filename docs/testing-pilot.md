@@ -75,11 +75,38 @@ complete their requested coverage independently.
 - A configured legacy/IAC loopback uses the independent probe's literal PC/note
   vectors through real OS MIDI input and output.
 - The Windows desktop suite starts the packaged EXE, opens configuration, connects
-  its test output, uses the keypad to send `C5 2A`, changes output to all channels,
+  its test output, uses the keypad to send bank select `B5 00 00` then `C5 2A`, changes output to all channels,
   returns to keyboard entry and sends program 127 on all 16 channels, restarts,
   verifies saved settings by sending program zero, and checks virtual-port removal.
   Received messages are recorded in JSON Lines by a separate receiver process;
   exact sequences are compared, including a short window for duplicate arrivals.
+
+### Preset outcome coverage and review (20 October 2026)
+
+`BankSelectionTests` models an independent receiver using the FM9's documented
+CC#0 bank and Program Change rules ([FM9 manual, MIDI reference tables](https://www.fractalaudio.com/downloads/manuals/FM9/FM9-Owners-Manual.pdf)).
+It checks the selected preset, not just outgoing bytes: all 128 supported presets,
+both numbering settings, starting banks 0, 1, 2, 3 and 127, channels 1, 6 and 16,
+and all-channel output. Each request starts with the receiver's bank re-seeded,
+including Next/Prev/Last and boundary wrapping. Failure checks cover both the bank
+message and the subsequent program message. These tests are also included in the
+explicit offline/physical-read-only portable test profiles; they use fake ports.
+
+The new bank tests failed against the old implementation (33 failures, 9 passes)
+and passed after the fix (42 passes). Further review reproduced eight failures:
+navigation discarded pending entry while disconnected or after a send error, and
+Connect used stale numeric output indices after devices moved or disappeared.
+Those cases now have passing regressions. Navigation clears entry only on a
+successful send; Connect resolves the saved name/occurrence in the current catalog
+and refuses a missing selection. Names/occurrences still cannot distinguish two
+identically named devices that exchange order; a stable output-device identity
+would require extending the backend boundary.
+
+The complete Release functional suite passes: 152 tests, none skipped. Evidence
+is in `artifacts/bank-selection-tests/` (`bank-before.trx`, `bank-after.trx`,
+`review-before.trx`, `functional.trx`). The desktop pilot's expected sequences
+were updated for bank selection. This run does not establish physical FM9
+selection/readback, native transport, or packaged desktop acceptance.
 
 Headless checks exercise application controls and routing in memory. Native
 checks and the desktop suite add coverage of the actual OS MIDI/window backends.

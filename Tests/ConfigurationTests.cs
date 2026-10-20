@@ -32,7 +32,7 @@ public sealed class ConfigurationTests
             window.Execute("7"); Assert.Equal(seven, Display(window)); window.Execute("Send"); Assert.Equal(seven, Display(window));
             Assert.Contains(window.GetVisualDescendants().OfType<TextBlock>(), label => label.Text == $"Sent preset {seven}.");
             Capture(window, $"preset-sent-{digits}-{offset}");
-            Assert.Equal(0xc0 | ((7 - offset) << 8), sent.Single());
+            Assert.Equal(new[] { 0xb0, 0xc0 | ((7 - offset) << 8) }, sent);
             window.Execute("Next"); Assert.Equal(eight, Display(window)); window.Execute("Last"); Assert.Equal(seven, Display(window));
         }
         finally { window.Close(); }
@@ -196,10 +196,10 @@ public sealed class ConfigurationTests
         try
         {
             window.Execute("0"); window.Execute("4"); await Pause(); Assert.Empty(sent);
-            window.Execute("2"); await Pause(); Assert.Equal(new[] { 0xc0 | (42 << 8) }, sent);
-            window.Execute("1"); window.Execute("2"); window.Execute("7"); window.Execute("Clear"); await Pause(); Assert.Single(sent);
-            window.Execute("1"); window.Execute("2"); window.Execute("7"); window.Execute("4"); await Pause(); Assert.Single(sent); Assert.Equal("004", Display(window));
-            window.Execute("Clear"); window.Execute("1"); window.Execute("2"); window.Execute("7"); OpenConfiguration(window); await Pause(); Assert.Single(sent);
+            window.Execute("2"); await Pause(); Assert.Equal(new[] { 0xb0, 0xc0 | (42 << 8) }, sent);
+            window.Execute("1"); window.Execute("2"); window.Execute("7"); window.Execute("Clear"); await Pause(); Assert.Equal(2, sent.Count);
+            window.Execute("1"); window.Execute("2"); window.Execute("7"); window.Execute("4"); await Pause(); Assert.Equal(2, sent.Count); Assert.Equal("004", Display(window));
+            window.Execute("Clear"); window.Execute("1"); window.Execute("2"); window.Execute("7"); OpenConfiguration(window); await Pause(); Assert.Equal(2, sent.Count);
             Find<CheckBox>(window, "AutoSend").IsChecked = false; Find<NumericUpDown>(window, "AutoSendDelay").Value = 120;
             Click(Find<Button>(window, "SaveConfiguration")); window.Execute("Send"); Assert.Equal(0xc0 | (127 << 8), sent[^1]);
             Assert.False(settings.AutoSend); Assert.Equal(120, settings.AutoSendDelayMs);
@@ -216,9 +216,9 @@ public sealed class ConfigurationTests
         {
             window.Execute("0"); window.Execute("4"); window.Execute("2");
             var count = Find<NumericUpDown>(window, "AutoSendDigits"); count.Value = 2; await Pause(); Assert.Empty(sent);
-            window.Execute("4"); window.Execute("2"); await Pause(); Assert.Equal(new[] { 0xc0 | (42 << 8) }, sent);
-            count.Value = 4; window.Execute("0"); window.Execute("1"); window.Execute("2"); window.Execute("8"); await Pause(); Assert.Single(sent);
-            window.Execute("0"); window.Execute("0"); window.Execute("4"); window.Execute("2"); await Pause(); Assert.Equal(2, sent.Count); Assert.Equal(0xc0 | (42 << 8), sent[^1]);
+            window.Execute("4"); window.Execute("2"); await Pause(); Assert.Equal(new[] { 0xb0, 0xc0 | (42 << 8) }, sent);
+            count.Value = 4; window.Execute("0"); window.Execute("1"); window.Execute("2"); window.Execute("8"); await Pause(); Assert.Equal(2, sent.Count);
+            window.Execute("0"); window.Execute("0"); window.Execute("4"); window.Execute("2"); await Pause(); Assert.Equal(4, sent.Count); Assert.Equal(0xc0 | (42 << 8), sent[^1]);
             Click(Find<Button>(window, "SaveConfiguration")); Assert.Equal(4, settings.AutoSendDigits);
         }
         finally { window.Close(); }
@@ -238,7 +238,7 @@ public sealed class ConfigurationTests
             foreach (char digit in entry[..^1]) { Press(window, Enum.Parse<PhysicalKey>("Digit" + digit)); }
             await Pause(); Assert.Empty(sent);
             Press(window, Enum.Parse<PhysicalKey>("Digit" + entry[^1])); await Pause();
-            Assert.Equal(new[] { 0xc0 | (expected << 8) }, sent);
+            Assert.Equal(new[] { 0xb0, 0xc0 | (expected << 8) }, sent);
         }
         finally { window.Close(); }
     }
@@ -254,7 +254,7 @@ public sealed class ConfigurationTests
             Click(Find<Button>(window, "SaveConfiguration"));
             Press(window, PhysicalKey.Digit4); Press(window, PhysicalKey.Digit2); Press(window, PhysicalKey.Digit7);
             await Pause(); Assert.Empty(sent); Assert.Equal("42", Display(window));
-            Press(window, PhysicalKey.Enter); Assert.Equal(new[] { 0xc0 | (42 << 8) }, sent); Assert.False(settings.AutoSend);
+            Press(window, PhysicalKey.Enter); Assert.Equal(new[] { 0xb0, 0xc0 | (42 << 8) }, sent); Assert.False(settings.AutoSend);
         }
         finally { window.Close(); }
     }
@@ -272,7 +272,7 @@ public sealed class ConfigurationTests
         {
             foreach (char digit in entry) { Press(window, Enum.Parse<PhysicalKey>("Digit" + digit)); }
             Click(Find<Button>(window, "Digit9")); await Pause(); Assert.Empty(sent); Assert.Equal(entry, Display(window));
-            Click(Find<Button>(window, "SendProgram")); Assert.Equal(new[] { 0xc0 | (expected << 8) }, sent);
+            Click(Find<Button>(window, "SendProgram")); Assert.Equal(new[] { 0xb0, 0xc0 | (expected << 8) }, sent);
         }
         finally { window.Close(); }
     }

@@ -17,7 +17,7 @@ internal static class WindowsDesktop
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static extern nint GetForegroundWindow();
 
-    private static readonly int[] FirstMessage = [0x2ac5];
+    private static readonly int[] FirstMessage = [0xb5, 0x2ac5];
     private static readonly string[] CoverageLimits = ["Tool-launched packaged application; Explorer launch and physical device behaviour are separate checks."];
     public static void Run(Options options)
     {
@@ -64,12 +64,12 @@ internal static class WindowsDesktop
             Check("Packaged application starts with isolated settings", () => Launch());
             Check("Real configuration connects the test MIDI output", Connect);
             string firstTrace = StartReceiver("first");
-            Check("Keypad sends exactly C5 2A after confirmation", () =>
+            Check("Keypad selects bank zero then sends C5 2A after confirmation", () =>
             {
                 Invoke(window!, "Digit4"); Invoke(window!, "Digit2");
                 if (ReadMessages(firstTrace).Count != 0) { throw new IOException("Unexpected MIDI before confirmation."); }
                 Invoke(window!, "SendProgram");
-                Wait(() => ReadMessages(firstTrace).Count >= 1, "first program change");
+                Wait(() => ReadMessages(firstTrace).Count >= 2, "first bank and program change");
                 AssertMessages(firstTrace, FirstMessage);
             });
             Check("Configuration returns keyboard focus and all-channel send works", () =>
@@ -92,8 +92,8 @@ internal static class WindowsDesktop
                 }
                 RequireForeground();
                 Keyboard.Type(VirtualKeyShort.RETURN); // Type releases the key as well as pressing it.
-                Wait(() => ReadMessages(firstTrace).Count >= 17, "all-channel program changes");
-                AssertMessages(firstTrace, FirstMessage.Concat(Enumerable.Range(0, 16).Select(i => 0x7fc0 | i)).ToArray());
+                Wait(() => ReadMessages(firstTrace).Count >= 34, "all-channel bank and program changes");
+                AssertMessages(firstTrace, FirstMessage.Concat(Enumerable.Range(0, 16).SelectMany(i => new[] { 0xb0 | i, 0x7fc0 | i })).ToArray());
                 Capture.Element(window!).ToFile(Path.Combine(directory, "desktop-sent.png"));
             });
             StopReceiver(); CloseApplication();
@@ -105,8 +105,8 @@ internal static class WindowsDesktop
                 Launch(); Connect();
                 string secondTrace = StartReceiver("restart");
                 Invoke(window!, "Digit0"); Invoke(window!, "SendProgram");
-                Wait(() => ReadMessages(secondTrace).Count >= 16, "restored all-channel send");
-                AssertMessages(secondTrace, Enumerable.Range(0, 16).Select(i => 0xc0 | i).ToArray());
+                Wait(() => ReadMessages(secondTrace).Count >= 32, "restored all-channel send");
+                AssertMessages(secondTrace, Enumerable.Range(0, 16).SelectMany(i => new[] { 0xb0 | i, 0xc0 | i }).ToArray());
             });
             StopReceiver(); CloseApplication();
             Check("Test MIDI endpoint is removed on exit", () =>

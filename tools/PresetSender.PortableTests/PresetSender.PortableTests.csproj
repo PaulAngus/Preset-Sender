@@ -19,6 +19,7 @@
   </ItemGroup>
   <ItemGroup Condition="('$(TestLabProfile)' == 'OfflineWindows' or '$(TestLabProfile)' == 'PhysicalWindowsReadOnly')">
     <Compile Include="../../Tests/SenderTests.cs" />
+    <Compile Include="../../Tests/BankSelectionTests.cs" />
     <Compile Include="../../Tests/ConfigurationTests.cs" />
     <Compile Include="../../Tests/MainScreenTests.cs" />
     <Compile Include="../../Tests/MidiRoutingTests.cs" />

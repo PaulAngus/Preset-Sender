@@ -11,6 +11,38 @@ namespace PresetSender.Tests;
 
 public sealed class MidiRoutingTests
 {
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ConnectingAfterDeviceListChangesNeverOpensTheReplacementDevice(bool selectedDeviceRemoved)
+    {
+        var midi = new FakeMidi();
+        var window = new SenderWindow(true, null, midi, new SenderSettings { OutputName = "Test receiver" });
+        window.Show(); OpenConfiguration(window);
+        try
+        {
+            await WaitUntil(() => Find<Button>(window, "RefreshMidi").IsEnabled && midi.RefreshCount > 0);
+            // Another device now occupies the old numeric slot. The chosen device
+            // either moved to slot 7 or was unplugged entirely.
+            midi.Outputs = selectedDeviceRemoved ? [(0, "Unrelated synthesizer")]
+                : [(0, "Unrelated synthesizer"), (7, "Test receiver")];
+            Click(Find<Button>(window, "ConnectMidi"));
+            await WaitUntil(() => Find<Button>(window, "ConnectMidi").IsEnabled || Find<Button>(window, "DisconnectMidi").IsEnabled);
+            if (selectedDeviceRemoved)
+            {
+                Assert.Null(midi.OpenedOutputIndex);
+                window.Execute("1"); window.Execute("Send");
+                Assert.Empty(midi.Output.Messages);
+            }
+            else
+            {
+                Assert.Equal(7, midi.OpenedOutputIndex);
+                Assert.True(Find<Button>(window, "DisconnectMidi").IsEnabled);
+            }
+        }
+        finally { window.Close(); }
+    }
+
     [AvaloniaFact]
     public async Task SlowDetectionLeavesConfigurationResponsiveAndRunsOffUiThread()
     {
@@ -79,7 +111,7 @@ public sealed class MidiRoutingTests
             Dispatcher.UIThread.RunJobs();
             Find<ComboBox>(window, "OutputChannel").SelectedIndex = 0;
             window.Execute("4"); window.Execute("2"); window.Execute("Send");
-            Assert.Equal(Enumerable.Range(0, 16).Select(channel => 0xc0 | channel | (42 << 8)), midi.Output.Messages);
+            Assert.Equal(Enumerable.Range(0, 16).SelectMany(channel => new[] { 0xb0 | channel, 0xc0 | channel | (42 << 8) }), midi.Output.Messages);
             Assert.Equal("042", Find<TextBlock>(window, "ProgramDisplay").Text);
             Click(Find<Button>(window, "DisconnectMidi"));
             Assert.True(midi.Output.Disposed);
@@ -158,15 +190,15 @@ public sealed class MidiRoutingTests
             Emit(0xa0 | (60 << 8) | (80 << 16)); Emit(0x80 | (60 << 8));
             Emit(0xb0 | (20 << 8) | (127 << 16)); Emit(0xb0 | (20 << 8) | (64 << 16)); Emit(0xb0 | (20 << 8));
             Assert.Empty(midi.Output.Messages);
-            window.Execute("4"); window.Execute("2"); Emit(0xc0 | (70 << 8)); Assert.Equal(new[] { 0xc0 | (42 << 8) }, midi.Output.Messages);
+            window.Execute("4"); window.Execute("2"); Emit(0xc0 | (70 << 8)); Assert.Equal(new[] { 0xb0, 0xc0 | (42 << 8) }, midi.Output.Messages);
             Click(Find<Button>(window, "ConfigureNoteMapping")); Find<ComboBox>(window, "LearnCommand").SelectedIndex = 2; Click(Find<Button>(window, "LearnMidi"));
             Emit(0xb0 | (22 << 8) | (127 << 16)); Emit(0xb0 | (22 << 8) | (64 << 16));
             Click(Find<Button>(window, "RemoveLearnedMapping"));
-            Emit(0xb0 | (22 << 8) | (80 << 16)); Emit(0xb0 | (22 << 8)); Assert.Single(midi.Output.Messages);
+            Emit(0xb0 | (22 << 8) | (80 << 16)); Emit(0xb0 | (22 << 8)); Assert.Equal(2, midi.Output.Messages.Count);
             Emit(0xb0 | (22 << 8) | (127 << 16)); Assert.Equal(0xb0 | (22 << 8) | (127 << 16), midi.Output.Messages[^1]);
             Click(Find<Button>(window, "CancelMapping"));
             Emit(0x90 | (37 << 8) | (100 << 16)); Find<CheckBox>(window, "MidiNoteEntry").IsChecked = false;
-            Emit(0x80 | (37 << 8)); Assert.Equal(2, midi.Output.Messages.Count);
+            Emit(0x80 | (37 << 8)); Assert.Equal(3, midi.Output.Messages.Count);
 
             void Emit(int raw) { midi.Input.Emit(raw); Dispatcher.UIThread.RunJobs(); }
         }
@@ -262,11 +294,11 @@ public sealed class MidiRoutingTests
             Assert.Empty(midi.Output.Messages);
             Assert.Equal("042", Find<TextBlock>(window, "ProgramDisplay").Text);
             midi.Input.Emit(0xc0 | (12 << 8)); Dispatcher.UIThread.RunJobs();
-            Assert.Equal(new[] { 0xcf | (42 << 8) }, midi.Output.Messages);
+            Assert.Equal(new[] { 0xbf, 0xcf | (42 << 8) }, midi.Output.Messages);
             Click(Find<Button>(window, "DisconnectMidi"));
             Assert.True(midi.Input.Disposed); Assert.True(midi.Output.Disposed);
             midi.Input.Emit(0xc0 | (12 << 8)); Dispatcher.UIThread.RunJobs();
-            Assert.Single(midi.Output.Messages);
+            Assert.Equal(2, midi.Output.Messages.Count);
 
             void Learn(int index, int pc)
             {
@@ -335,7 +367,7 @@ public sealed class MidiRoutingTests
             {
                 window.KeyPressQwerty(key, Avalonia.Input.RawInputModifiers.None); window.KeyReleaseQwerty(key, Avalonia.Input.RawInputModifiers.None);
             }
-            Assert.Equal(new[] { 0xc0 | (42 << 8) }, midi.Output.Messages);
+            Assert.Equal(new[] { 0xb0, 0xc0 | (42 << 8) }, midi.Output.Messages);
         }
         finally { window.Close(); }
     }

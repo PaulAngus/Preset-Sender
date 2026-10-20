@@ -127,24 +127,24 @@ public sealed class SenderTests
             window.KeyPressQwerty(Avalonia.Input.PhysicalKey.Digit2, Avalonia.Input.RawInputModifiers.None); window.KeyReleaseQwerty(Avalonia.Input.PhysicalKey.Digit2, Avalonia.Input.RawInputModifiers.None);
             Assert.Empty(writes);
             window.KeyPressQwerty(Avalonia.Input.PhysicalKey.Enter, Avalonia.Input.RawInputModifiers.None); window.KeyReleaseQwerty(Avalonia.Input.PhysicalKey.Enter, Avalonia.Input.RawInputModifiers.None);
-            Assert.Equal(new[] { 0xc0 | (42 << 8) }, writes);
+            Assert.Equal(new[] { 0xb0, 0xc0 | (42 << 8) }, writes);
             Assert.Equal("042", window.GetVisualDescendants().OfType<TextBlock>().First(c => c.Name == "ProgramDisplay").Text);
             foreach (var key in new[] { Avalonia.Input.PhysicalKey.Digit1, Avalonia.Input.PhysicalKey.Digit2, Avalonia.Input.PhysicalKey.Digit7 })
             {
                 window.KeyPressQwerty(key, Avalonia.Input.RawInputModifiers.None);
                 window.KeyReleaseQwerty(key, Avalonia.Input.RawInputModifiers.None);
             }
-            Assert.Single(writes);
+            Assert.Equal(2, writes.Count);
             Assert.Equal("127", window.GetVisualDescendants().OfType<TextBlock>().First(c => c.Name == "ProgramDisplay").Text);
             window.KeyPressQwerty(Avalonia.Input.PhysicalKey.Enter, Avalonia.Input.RawInputModifiers.None);
             window.KeyReleaseQwerty(Avalonia.Input.PhysicalKey.Enter, Avalonia.Input.RawInputModifiers.None);
-            Assert.Equal(0xc0 | (127 << 8), writes[1]);
+            Assert.Equal(new[] { 0xb0, 0xc0 | (127 << 8) }, writes.Skip(2));
             window.GetVisualDescendants().OfType<Button>().Single(c => c.Name == "OpenConfiguration").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); Dispatcher.UIThread.RunJobs();
             var configuration = window.OwnedWindows.Single();
             configuration.GetVisualDescendants().OfType<ComboBox>().First(c => c.Name == "MidiOutput").Focus();
             configuration.KeyPressQwerty(Avalonia.Input.PhysicalKey.Digit7, Avalonia.Input.RawInputModifiers.None); configuration.KeyReleaseQwerty(Avalonia.Input.PhysicalKey.Digit7, Avalonia.Input.RawInputModifiers.None);
             Assert.Equal("127", window.GetVisualDescendants().OfType<TextBlock>().First(c => c.Name == "ProgramDisplay").Text);
-            Assert.Equal(2, writes.Count);
+            Assert.Equal(4, writes.Count);
         }
         finally { window.Close(); }
     }
@@ -177,7 +177,7 @@ public sealed class SenderTests
             }
             else { Press(Avalonia.Input.PhysicalKey.Enter); }
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal(new[] { 0xc0 | (42 << 8) }, writes);
+            Assert.Equal(new[] { 0xb0, 0xc0 | (42 << 8) }, writes);
             Assert.True(send.IsEnabled);
             string? directory = Environment.GetEnvironmentVariable("PRESET_SENDER_SCREENSHOT_DIR");
             if (directory is not null)
@@ -194,7 +194,7 @@ public sealed class SenderTests
             Press(Avalonia.Input.PhysicalKey.Enter);
             Press(Avalonia.Input.PhysicalKey.Digit7);
             Press(Avalonia.Input.PhysicalKey.Enter);
-            Assert.Equal(new[] { 0xc0 | (42 << 8), 0xc0 | (127 << 8), 0xc0 | (7 << 8) }, writes);
+            Assert.Equal(new[] { 0xb0, 0xc0 | (42 << 8), 0xb0, 0xc0 | (127 << 8), 0xb0, 0xc0 | (7 << 8) }, writes);
 
             void Press(Avalonia.Input.PhysicalKey key)
             {

@@ -14,6 +14,8 @@ internal sealed class CapturedMidiBackend : ISenderMidiBackend
     public bool FailSend { get => Output.FailSend; set => Output.FailSend = value; }
     public bool SupportsVirtualOutput { get; set; }
     public bool OpenedVirtual { get; private set; }
+    public IReadOnlyList<(int Index, string Name)> Outputs { get; set; } = [(0, "Test receiver")];
+    public int? OpenedOutputIndex { get; private set; }
     public void RefreshCapabilities()
     {
         RefreshAction?.Invoke();
@@ -21,9 +23,9 @@ internal sealed class CapturedMidiBackend : ISenderMidiBackend
         if (RecoverVirtualOnRefresh) { SupportsVirtualOutput = true; }
     }
     public IReadOnlyList<(string Id, string Name)> GetInputDevices() => [("controller", "Test controller")];
-    public IReadOnlyList<(int Index, string Name)> GetOutputDevices() => [(0, "Test receiver")];
+    public IReadOnlyList<(int Index, string Name)> GetOutputDevices() => Outputs;
     public IMidiInputPort OpenInput(string id) => Input;
-    public IMidiOutputPort OpenOutput(int index) => Output;
+    public IMidiOutputPort OpenOutput(int index) { OpenedOutputIndex = index; return Output; }
     public IMidiOutputPort OpenVirtualOutput() { OpenedVirtual = true; return Output; }
 }
 
