@@ -134,12 +134,12 @@ qualification, physical Fractal readback, lab-wide scheduling and multi-machine
 aggregation remain subsequent work. This pilot does not claim those checks ran.
 The dual-boot Mac runs one OS at a time; retain separate reports for both boots.
 
-For future CI builds on development machines, invoke the same script and upload
+For local development-machine runs, invoke the same script and retain
 the run folder's `report.*`, `source.json`, `*.txt`, `functional/`, `native/`,
 `screenshots/` and `desktop/` directories as evidence. Build caches and private
-executables need not be uploaded. Use interactive user sessions for desktop
-jobs; functional jobs can run without an unlocked desktop. No automation or
-self-hosted runner is installed by this script.
+executables need not be included in shared evidence. Use interactive user sessions
+for desktop checks; functional checks can run without an unlocked desktop.
+No hosted runner is used.
 
 ## Desktop keyboard synchronization
 

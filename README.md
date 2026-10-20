@@ -134,7 +134,7 @@ The packaging uses Microsoft's [single-file deployment and full extraction guida
 
 On macOS, run `dotnet build PresetSender.slnx -c Release`, `dotnet test PresetSender.slnx -c Release`, or `dotnet run --project PresetSender.csproj` directly; the Windows MIDI initialization script is unnecessary. Platform selection follows the host or runtime identifier, with `-p:SenderPlatform=macOS` available for explicit selection. Native Mac launch and MIDI acceptance remain unverified on this Windows development PC.
 
-The repository includes Windows and macOS CI jobs for builds, simulated tests and formatting. The Windows job also packages the standalone EXE. Native MIDI checks remain opt-in and are not run in CI.
+Build, test, format, sign and package locally on the appropriate Windows or Mac development machine using the commands above and the [release guide](docs/github-releases.md). GitHub Actions is disabled. Native MIDI checks remain explicitly opt-in; use the audited offline profile when MIDI access is not authorized.
 
 ## Repository migration
 
@@ -142,7 +142,7 @@ Preset Sender moved from PresetMaestro's `PresetSender/` directory on 12 October
 
 Windows settings retain `%APPDATA%\PresetSender\settings.json`, so moving repositories does not reset the user's configuration. The PresetMaestro application, including its own Preset Sender page, remains separate.
 
-Migration validation on 12 October 2026: a fresh local clone restored and built the Windows and macOS targets, passed all 33 simulated Windows tests and formatting verification, and published the standalone Windows EXE. The main checkout passed all 34 Windows tests with native MIDI enabled and an EXE-only test directory using a fresh extraction cache. PresetMaestro's Release build also passed after the old sender directory was removed. The macOS target was compiled on Windows; native Mac execution and the new CI jobs have not yet been run.
+Migration validation on 12 October 2026: a fresh local clone restored and built the Windows and macOS targets, passed all 33 simulated Windows tests and formatting verification, and published the standalone Windows EXE. The main checkout passed all 34 Windows tests with native MIDI enabled and an EXE-only test directory using a fresh extraction cache. PresetMaestro's Release build also passed after the old sender directory was removed. The macOS target was compiled on Windows; native Mac execution remained unverified at the time of that migration.
 
 UX decisions and verification are recorded in [ux.md](ux.md).
 
