@@ -109,7 +109,7 @@ public sealed partial class SenderWindow
         foreach (var port in ports) { StopThruInput(port, output); }
     }
 
-    private static void StopThruInput(ThruPort port, IMidiOutputPort? output)
+    private void StopThruInput(ThruPort port, IMidiOutputPort? output)
     {
         port.Input.MessageReceived -= port.MessageHandler; port.Input.ErrorReceived -= port.ErrorHandler;
         try { port.Input.Stop(); } catch (Exception) { }

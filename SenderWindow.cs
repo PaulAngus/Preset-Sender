@@ -193,7 +193,7 @@ public sealed partial class SenderWindow : Window
                 foreach (int message in new[] { bankSelect, MidiMessageEncoding.ProgramChange(program, channel) })
                 {
                     if (_testSend is not null) { _testSend(message); }
-                    else { _outputPort!.Send(message); }
+                    else { SendOutput(_outputPort, message); }
                     LogMidi("Out", message);
                 }
                 sentCount++;
@@ -355,6 +355,7 @@ public sealed partial class SenderWindow : Window
         var input = _inputPort; var output = _outputPort;
         ReleaseForwardedNotes(_mainRouting, output); _mainRouting.Consumed.Clear();
         StopThruInputs(output);
+        _recentOutput.Clear();
         _inputPort = null; _outputPort = null;
         if (input is not null)
         {

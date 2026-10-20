@@ -108,6 +108,39 @@ is in `artifacts/bank-selection-tests/` (`bank-before.trx`, `bank-after.trx`,
 were updated for bank selection. This run does not establish physical FM9
 selection/readback, native transport, or packaged desktop acceptance.
 
+### Routing outcome fixes (20 October 2026)
+
+The two routing findings are now covered by `RoutingOutcomeTests` and fixed.
+The receiver models held keys, sustained sounding notes, pedal state, and actual
+program-selection counts. An echo route feeds output back into an application
+input callback, with a test-only emergency cap that must never be reached.
+
+Ten new scenarios failed before the fixes; the complete suite now passes 166
+functional tests, none skipped. Coverage includes main/thru feedback, generated
+single-channel and broadcast presets, stopping after disconnect despite queued
+callbacks, normal repeated input, pedal release, disabling forwarding,
+thru removal, disconnect, exit, unrelated channels, and another input's sustain on
+a shared channel. Evidence is in `artifacts/routing-outcomes/`.
+
+Feedback protection disconnects before processing a message that exceeds either
+128 identical returns or 256 mixed returns in one second, counting only messages
+matching output transmitted in the last second. Recent-message storage is bounded.
+MIDI 1.0 has no origin tag: slow/transforming loops remain a routing responsibility,
+and sufficiently dense legitimate repeated traffic can trip this conservative
+circuit breaker. Ordinary repeats are delivered without silent echo suppression.
+Cleanup sends note-offs and releases owned sustain while the output is still open;
+it cannot guarantee silence after a physical transport failure, or selectively
+lift one source's pedal while another source shares that MIDI channel.
+
+Release verification: all three native MIDI checks passed against an EXE-only copy
+of the published executable, including fresh API extraction/repair and virtual
+delivery. The macOS application and offline portable test runner also built without
+warnings. Published with `Publish-PresetSender.ps1`; all three distribution files
+and both desktop-visible local UNC views match SHA-256
+`83544B0C30AFAFA3454810F95AC86ECF1A2832F543B039C791DA66559AB91394`.
+See `artifacts/routing-outcomes/distribution-sha256.json` for paths and retained
+previous executable backups. No physical FM9 state was changed during validation.
+
 Headless checks exercise application controls and routing in memory. Native
 checks and the desktop suite add coverage of the actual OS MIDI/window backends.
 The desktop run requires an unlocked, interactive Windows desktop. It briefly

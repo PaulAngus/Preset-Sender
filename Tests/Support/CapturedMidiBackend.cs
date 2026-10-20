@@ -51,6 +51,7 @@ internal sealed class CapturedMidiInput : IMidiInputPort
 
 internal sealed class CapturedMidiOutput : IMidiOutputPort
 {
+    public Action<int>? OnSend { get; set; }
     public List<int> Messages { get; } = [];
     public bool FailSend { get; set; }
     public int FailAfter { get; set; } = int.MaxValue;
@@ -59,6 +60,7 @@ internal sealed class CapturedMidiOutput : IMidiOutputPort
     {
         if (FailSend || Messages.Count >= FailAfter) { throw new IOException("Simulated output failure"); }
         Messages.Add(message);
+        OnSend?.Invoke(message);
     }
     public void SendBuffer(byte[] frame) => throw new InvalidOperationException("Generic sender must not send SysEx.");
     public void Dispose() => Disposed = true;
