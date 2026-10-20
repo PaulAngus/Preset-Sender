@@ -1,16 +1,10 @@
 # Preset Sender project guidance
 
-## Publishing and distribution
+## Publishing and verification
 
 - Preset Sender must remain a standalone EXE: bundle the native MIDI API and its resource file for automatic app-private extraction on eligible Windows 11 builds. Do not reintroduce a separate MIDI API installation requirement. Windows 10 uses hardware MIDI or user-installed loopMIDI; never extract or load the bundled MIDI Services API there.
 
-- When asked to publish or update distribution copies, build the latest Release executable with `Publish-PresetSender.ps1` and update all three destinations:
-  - `C:\bin\PresetSender.exe`
-  - `C:\Users\paulg\Dropbox\Documents\Guitar\FM9\Apps\PresetSender.exe`
-  - `\\192.168.2.3\GeneralData\Binaries\MightBeUseful\PresetSender.exe`
-- Verify each destination's SHA-256 matches `artifacts/windows/PresetSender.exe`. If a destination is unavailable or a copy fails, report it explicitly; do not report distribution as complete.
-- Verify local distribution files in the normal desktop's filesystem view as well as the tool's view. On this PC, `\\localhost\C$\bin` and `\\localhost\C$\Users\paulg\Dropbox\Documents\Guitar\FM9\Apps` provide the desktop-visible destinations when the views differ.
-- For Windows MIDI setup/startup fixes, validate by double-clicking the distributed EXE in the user's File Explorer, then check virtual-output discovery and connection. Tool-launched processes alone are insufficient: the optional API can exist in the tool's filesystem view while being absent from the normal desktop. Verify that the Explorer-launched process actually loads the optional API. The latest detection result is recorded in `%LOCALAPPDATA%\PresetSender\midi-backend.log`.
+- For Windows MIDI setup/startup fixes, validate by double-clicking the published EXE in the user's File Explorer, then check virtual-output discovery and connection. Tool-launched processes alone are insufficient: the optional API can exist in the tool's filesystem view while being absent from the normal desktop. Verify that the Explorer-launched process actually loads the optional API. The latest detection result is recorded in `%LOCALAPPDATA%\PresetSender\midi-backend.log`.
 
 ## UI and UX changes
 

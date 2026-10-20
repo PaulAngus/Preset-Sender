@@ -16,3 +16,6 @@ Thumbs.db
 
 # Repository-local NuGet cache.
 .build/
+
+# Machine-specific distribution instructions.
+/LOCAL-DISTRIBUTION.md
