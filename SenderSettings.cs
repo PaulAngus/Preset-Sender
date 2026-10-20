@@ -9,6 +9,7 @@ internal sealed class SenderSettings
     public string? OutputName { get; set; }
     public int OutputOccurrence { get; set; }
     public bool? VirtualOutput { get; set; }
+    public bool AppToAppRouting { get; set; }
     public int Offset { get; set; }
     public int OutputChannel { get; set; } = 1;
     public int InputChannel { get; set; }
@@ -28,6 +29,7 @@ internal sealed class SenderSettings
     internal void CopyFrom(SenderSettings source)
     {
         InputId = source.InputId; OutputName = source.OutputName; OutputOccurrence = source.OutputOccurrence; VirtualOutput = source.VirtualOutput;
+        AppToAppRouting = source.AppToAppRouting;
         Offset = source.Offset; OutputChannel = source.OutputChannel; InputChannel = source.InputChannel; ForwardMidi = source.ForwardMidi;
         AutoSend = source.AutoSend; AutoSendDigits = source.AutoSendDigits; AutoSendDelayMs = source.AutoSendDelayMs;
         KeyboardEntryEnabled = source.KeyboardEntryEnabled; MidiEntryEnabled = source.MidiEntryEnabled;

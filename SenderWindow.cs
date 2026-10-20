@@ -244,11 +244,11 @@ public sealed partial class SenderWindow : Window
         try
         {
             var ports = !_discoverPorts
-                ? (Inputs: Array.Empty<(string Id, string Name)>(), Outputs: Array.Empty<(int Index, string Name)>(), Virtual: false)
+                ? (Inputs: Array.Empty<(string Id, string Name)>(), Outputs: Array.Empty<(int Index, string Name)>(), Virtual: false, LoopMidi: LoopMidiStatus.NotApplicable)
                 : await Task.Run(() =>
                 {
                     _backend.RefreshCapabilities();
-                    return (Inputs: _backend.GetInputDevices().ToArray(), Outputs: _backend.GetOutputDevices().ToArray(), Virtual: _backend.SupportsVirtualOutput);
+                    return (Inputs: _backend.GetInputDevices().ToArray(), Outputs: _backend.GetOutputDevices().ToArray(), Virtual: _backend.SupportsVirtualOutput, LoopMidi: _backend.GetLoopMidiStatus());
                 });
             if (_closed)
             {
@@ -259,7 +259,10 @@ public sealed partial class SenderWindow : Window
             var outputs = ports.Outputs.Select(p => new OutputChoice(p.Index, p.Name, ports.Outputs.TakeWhile(q => q.Index != p.Index).Count(q => q.Name == p.Name))).ToList();
             virtualOutput ??= ports.Virtual && outputName is null;
             if (ports.Virtual) { outputs.Insert(0, new OutputChoice(-1, "Preset Sender (virtual device)", 0, true)); }
-            _virtualMidiHelp.Text = VirtualMidiHelp(ports.Virtual);
+            _supportsVirtualOutput = ports.Virtual;
+            _loopMidiStatus = ports.LoopMidi;
+            _loopMidiWarningDismissed = false;
+            UpdateAppRoutingWarning();
             _input.ItemsSource = inputs; _input.SelectedItem = inputs.FirstOrDefault(p => p.Id == inputId) ?? inputs[0];
             _output.ItemsSource = outputs; _output.SelectedItem = outputs.FirstOrDefault(p => virtualOutput.Value ? p.IsVirtual : !p.IsVirtual && p.Name == outputName && p.Occurrence == occurrence);
             if (_output.SelectedItem is null && outputs.Count > 0 && outputName is null && !virtualOutput.Value)
@@ -355,6 +358,7 @@ public sealed partial class SenderWindow : Window
         _busy = busy; _connect.IsEnabled = !busy && _outputPort is null;
         _disconnect.IsEnabled = !busy && _outputPort is not null;
         _input.IsEnabled = _output.IsEnabled = _refresh.IsEnabled = !busy && _outputPort is null;
+        _appToAppRouting.IsEnabled = _refreshLoopMidi.IsEnabled = !busy && _outputPort is null;
         RebuildThruInputs();
         UpdateDisplay();
     }

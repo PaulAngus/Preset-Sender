@@ -18,6 +18,13 @@ public sealed partial class SenderWindow
     private readonly Button _disconnect = new() { Name = "DisconnectMidi", Content = "Disconnect", IsEnabled = false };
     private readonly TextBlock _configurationStatus = Text("Not connected");
     private readonly TextBlock _virtualMidiHelp = Text(VirtualMidiHelp(false));
+    private readonly CheckBox _appToAppRouting = new() { Name = "AppToAppRouting", Content = "Virtual MIDI output", IsVisible = false };
+    private readonly TextBlock _appToAppHelp = Text("A software MIDI port that other applications can receive from. Select an existing port in MIDI Out.");
+    private readonly Border _loopMidiWarning = new() { Name = "LoopMidiWarning", IsVisible = false, Padding = new Thickness(12), CornerRadius = new CornerRadius(6), Margin = new Thickness(0, 0, 0, 12) };
+    private readonly Button _refreshLoopMidi = new() { Name = "RefreshLoopMidi", Content = "Refresh devices", HorizontalAlignment = HorizontalAlignment.Left };
+    private LoopMidiStatus _loopMidiStatus;
+    private bool _supportsVirtualOutput;
+    private bool _loopMidiWarningDismissed;
     private readonly StackPanel _thruInputs = new() { Name = "ThruInputs", Spacing = 6 };
     private readonly StackPanel _midiLearningContent = new() { Name = "MidiLearningSection", Spacing = 8 };
     private readonly DispatcherTimer _autoSendTimer = new();
@@ -33,8 +40,22 @@ public sealed partial class SenderWindow
 #else
         return supportsVirtualOutput
             ? "To send to another app, select Preset Sender (virtual device) as the MIDI output, then select its matching input in the receiving app. Requires Windows 11 25H2 or later."
-            : "For another app without built-in virtual MIDI, install loopMIDI and create a port. Select its output here and its matching input in the receiving app.";
+            : "Select a hardware output for direct sends. For another app, select an existing virtual output and its matching input in the receiving app.";
 #endif
+    }
+
+    private void UpdateAppRoutingWarning()
+    {
+        bool legacyWindows = _loopMidiStatus != LoopMidiStatus.NotApplicable;
+        bool appToApp = _appToAppRouting.IsChecked == true;
+        _appToAppRouting.IsVisible = legacyWindows;
+        _appToAppHelp.IsVisible = legacyWindows;
+        _loopMidiWarning.IsVisible = legacyWindows && appToApp && _loopMidiStatus == LoopMidiStatus.Missing && !_loopMidiWarningDismissed;
+        _virtualMidiHelp.Text = !legacyWindows ? VirtualMidiHelp(_supportsVirtualOutput)
+            : !appToApp ? "Direct hardware output does not need loopMIDI."
+            : _loopMidiStatus == LoopMidiStatus.Installed ? "loopMIDI is installed. Start it and create a port, then Refresh devices. Select that output here and its matching input in the receiving app."
+            : _loopMidiStatus == LoopMidiStatus.Unknown ? "Could not check whether loopMIDI is installed. Select an existing virtual output and its matching input in the receiving app, then Refresh devices."
+            : "Select an existing virtual output here and its matching input in the receiving app. Other virtual MIDI drivers can also provide this connection.";
     }
 
     // PresetMaestro's BuildApprovedConnection and ApprovedEntryOptions, using
@@ -46,6 +67,29 @@ public sealed partial class SenderWindow
         _channel.Name = "OutputChannel"; _numbering.Name = "PresetNumbering";
         _command.Name = "LearnCommand"; _learn.Name = "LearnMidi"; _connect.Name = "ConnectMidi"; _refresh.Name = "RefreshMidi";
         _forward.Name = "ForwardMidi";
+        _appToAppRouting.IsChecked = _settings.AppToAppRouting;
+        AutomationProperties.SetName(_appToAppRouting, "Virtual MIDI output");
+        _appToAppHelp.Margin = new Thickness(0, 2, 0, 12);
+        AutomationProperties.SetAutomationId(_appToAppRouting, _appToAppRouting.Name);
+        _appToAppRouting.IsCheckedChanged += (_, _) =>
+        {
+            if (_restoringConfiguration) { return; }
+            _settings.AppToAppRouting = _appToAppRouting.IsChecked == true;
+            _loopMidiWarningDismissed = false;
+            UpdateAppRoutingWarning();
+        };
+        var warningTitle = new TextBlock { Text = "loopMIDI isn’t installed", FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
+        var warningBody = Text("To send to another app on Windows 10, install loopMIDI and create a port, or select a port from another virtual MIDI driver.");
+        var dismissWarning = new Button { Name = "DismissLoopMidiWarning", Content = "Close", HorizontalAlignment = HorizontalAlignment.Right };
+        AutomationProperties.SetName(dismissWarning, "Dismiss loopMIDI warning");
+        dismissWarning.Click += (_, _) => { _loopMidiWarningDismissed = true; UpdateAppRoutingWarning(); _appToAppRouting.Focus(); };
+        _refreshLoopMidi.Click += async (_, _) => await RefreshPortsAsync();
+        var warningHeader = new DockPanel(); DockPanel.SetDock(dismissWarning, Dock.Right); warningHeader.Children.Add(dismissWarning); warningHeader.Children.Add(warningTitle);
+        _loopMidiWarning.Child = new StackPanel { Spacing = 8, Children = { warningHeader, warningBody, _refreshLoopMidi } };
+        _loopMidiWarning.Bind(Border.BackgroundProperty, this.GetResourceObservable("SenderWarningBackground"));
+        foreach (var text in new[] { warningTitle, warningBody }) { text.Bind(TextBlock.ForegroundProperty, this.GetResourceObservable("SenderWarningText")); }
+        AutomationProperties.SetName(_loopMidiWarning, "loopMIDI is not installed for app-to-app routing");
+        AutomationProperties.SetLiveSetting(_loopMidiWarning, AutomationLiveSetting.Assertive);
         foreach (var control in new Control[] { _input, _output, _inputChannel, _channel, _numbering, _connect, _refresh, _disconnect })
         {
             AutomationProperties.SetAutomationId(control, control.Name);
@@ -88,7 +132,7 @@ public sealed partial class SenderWindow
             foreach (Control child in actionButtons.Children) { child.Margin = new Thickness(0, 0, narrow ? 8 : 0, 8); }
         };
         _configurationStatus.Margin = new Thickness(0, 2, 0, 8); _configurationStatus.FontSize = 13;
-        var connection = new StackPanel { Children = { ConfigLabel("MIDI Connection", 16), _configurationStatus, connectionGrid } };
+        var connection = new StackPanel { Children = { ConfigLabel("MIDI Connection", 16), _configurationStatus, _appToAppRouting, _appToAppHelp, _loopMidiWarning, connectionGrid } };
 
         var auto = new CheckBox { Name = "AutoSend", Content = "Auto-send", IsChecked = _settings.AutoSend };
         var digits = new CompactNumericUpDown { Name = "AutoSendDigits", Minimum = 1, Maximum = 4, Increment = 1, Value = _settings.AutoSendDigits, Width = 88, FormatString = "0", ParsingNumberStyle = NumberStyles.Integer };

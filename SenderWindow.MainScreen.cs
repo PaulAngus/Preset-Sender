@@ -116,6 +116,7 @@ public sealed partial class SenderWindow
         _autoSendTimer.Stop();
         if (_configurationWindow is not null) { _configurationWindow.Activate(); return; }
         CaptureSettings(); _configurationSnapshot = _settings.Clone();
+        _loopMidiWarningDismissed = false; UpdateAppRoutingWarning();
         var window = new Window
         {
             Name = "ConfigurationWindow",
@@ -156,6 +157,7 @@ public sealed partial class SenderWindow
         try
         {
             _settings.CopyFrom(original);
+            _appToAppRouting.IsChecked = _settings.AppToAppRouting;
             // Connect/Disconnect are live actions; keep the active connection.
             if (_outputPort is null && !_connecting)
             {
@@ -191,7 +193,7 @@ public sealed partial class SenderWindow
                 catch (Exception ex) { _status.Text = $"Could not restore a MIDI thru input: {ex.Message}"; }
             }
         }
-        finally { _restoringConfiguration = false; RebuildThruInputs(); UpdateMappings(); UpdateDisplay(); }
+        finally { _restoringConfiguration = false; RebuildThruInputs(); UpdateMappings(); UpdateDisplay(); UpdateAppRoutingWarning(); }
     }
 
     private T ConfigurationControl<T>(string name) where T : Control => _configurationContent.GetVisualDescendants().OfType<T>().Single(control => control.Name == name);

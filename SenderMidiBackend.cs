@@ -3,6 +3,8 @@ using PresetSender.Platforms;
 
 namespace PresetSender;
 
+internal enum LoopMidiStatus { NotApplicable, Missing, Installed, Unknown }
+
 internal interface ISenderMidiBackend
 {
     void RefreshCapabilities() { }
@@ -12,6 +14,7 @@ internal interface ISenderMidiBackend
     IMidiOutputPort OpenOutput(int index);
     bool SupportsVirtualOutput { get; }
     IMidiOutputPort OpenVirtualOutput();
+    LoopMidiStatus GetLoopMidiStatus() => LoopMidiStatus.NotApplicable;
 }
 
 #if TEST_LAB_OFFLINE_WINDOWS
@@ -30,6 +33,9 @@ internal sealed class NativeMidiBackend : ISenderMidiBackend
 #else
 internal sealed class NativeMidiBackend : ISenderMidiBackend
 {
+#if SENDER_WINDOWS
+    public LoopMidiStatus GetLoopMidiStatus() => LoopMidiInstallation.Detect();
+#endif
     public void RefreshCapabilities()
     {
 #if SENDER_WINDOWS
