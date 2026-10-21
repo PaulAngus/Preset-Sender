@@ -134,6 +134,55 @@ copies and both desktop-visible local views match published SHA-256
 paths and retained backups are recorded in
 `artifacts/preset-range/distribution-sha256.json`.
 
+### Published EXE against the physical FM9 (21 October 2026)
+
+All **24 hardware selection/navigation checks passed** with the published
+`C:\bin\PresetSender.exe`, SHA-256
+`91E21DAA600520D16E7D17A3DEC730A872FA6888DC6DE6DBA9B6E4590097295E`.
+The route was Preset Sender → MIDI Forwarder → the remote computer's USB-connected
+FM9, firmware **12.00**, receiving on MIDI channel **1**. Digits was set to **4**
+and Auto-send was off. Entries and Next/Prev/Last were operated through the
+published application's keyboard/keypad UI.
+
+Direct selections verified both numbering settings from deliberately different
+starting banks. FM9 preset indices in these tables are zero-based:
+
+| Starting FM9 preset | Starting bank | Zero-based entry | One-based entry | FM9 preset read back |
+| --- | --- | --- | --- | --- |
+| 426 | 3 | 200 | 201 | 200 |
+| 042 | 0 | 511 | 512 | 511 |
+
+Next and Prev crossed every FM9 bank boundary in both directions under both
+numbering settings:
+
+| FM9 preset indices | Zero-based display | One-based display |
+| --- | --- | --- |
+| 127 ↔ 128 | 127 ↔ 128 | 128 ↔ 129 |
+| 255 ↔ 256 | 255 ↔ 256 | 256 ↔ 257 |
+| 383 ↔ 384 | 383 ↔ 384 | 384 ↔ 385 |
+
+Last also returned across the 255/256 boundary correctly in both settings. The
+24 checks comprise 12 per numbering setting: two direct selections, three
+boundary starting selections, six Next/Prev transitions, and one Last return.
+
+Each outcome was verified by an independent helper querying the actual FM9's
+current preset and scene through SysEx. Replies were checked for FM9 framing and
+checksum; matching preset replies bracketed each scene read. These checks verify
+the selected hardware preset, rather than just the sender's display or outgoing
+MIDI bytes. Separate setup operations established the starting banks; the helper
+did not issue the preset requests or navigation actions under test.
+
+The original **preset 002, scene 1** was restored and confirmed by a further
+independent readback. Both tool-view and desktop-visible settings files were
+restored exactly, and the test app was closed. No presets were saved or
+overwritten. Local evidence, including all 24 outcomes, raw replies, executable
+identity and restoration readbacks, is in
+`artifacts/fm9-banked-exe-acceptance/result.json` and its adjacent JSON files.
+
+This run covers the physical FM9's 000–511 address range at the listed selections
+and boundaries. Preset indices 512–1023 remain covered by the simulated receiver
+tests above; a physical 1024-preset receiver was not tested.
+
 ### Routing outcome fixes (20 October 2026)
 
 The two routing findings are now covered by `RoutingOutcomeTests` and fixed.
