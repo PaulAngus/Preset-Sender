@@ -217,7 +217,7 @@ public sealed class ConfigurationTests
             window.Execute("0"); window.Execute("4"); window.Execute("2");
             var count = Find<NumericUpDown>(window, "AutoSendDigits"); count.Value = 2; await Pause(); Assert.Empty(sent);
             window.Execute("4"); window.Execute("2"); await Pause(); Assert.Equal(new[] { 0xb0, 0xc0 | (42 << 8) }, sent);
-            count.Value = 4; window.Execute("0"); window.Execute("1"); window.Execute("2"); window.Execute("8"); await Pause(); Assert.Equal(2, sent.Count);
+            count.Value = 4; window.Execute("1"); window.Execute("0"); window.Execute("2"); window.Execute("4"); await Pause(); Assert.Equal(2, sent.Count);
             window.Execute("0"); window.Execute("0"); window.Execute("4"); window.Execute("2"); await Pause(); Assert.Equal(4, sent.Count); Assert.Equal(0xc0 | (42 << 8), sent[^1]);
             Click(Find<Button>(window, "SaveConfiguration")); Assert.Equal(4, settings.AutoSendDigits);
         }

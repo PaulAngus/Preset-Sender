@@ -97,7 +97,7 @@ public sealed partial class SenderWindow
         ToolTip.SetTip(_forward, "Forward unused channel messages on their original channels. Preset-entry and learning controls, SysEx and clock/transport are excluded.");
         _channel.ItemsSource = AllOutputChannels.Concat(Enumerable.Range(1, 16).Select(i => $"Channel {i}")).ToArray(); _channel.SelectedIndex = _state.OutputChannel;
         _inputChannel.ItemsSource = AnyInputChannel.Concat(Enumerable.Range(1, 16).Select(i => i.ToString(CultureInfo.InvariantCulture))).ToArray(); _inputChannel.SelectedIndex = _state.InputChannel;
-        _numbering.ItemsSource = new[] { "0–127 (zero-based)", "1–128 (one-based)" }; _numbering.SelectedIndex = _state.NumberingOffset;
+        _numbering.ItemsSource = new[] { "0–1023 (zero-based)", "1–1024 (one-based)" }; _numbering.SelectedIndex = _state.NumberingOffset;
         _input.SelectionChanged += (_, _) =>
         {
             if (_restoringConfiguration) { return; }

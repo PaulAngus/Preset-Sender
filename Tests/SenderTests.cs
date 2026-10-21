@@ -54,29 +54,35 @@ public sealed class SenderTests
     [InlineData(0, "00", 0)]
     [InlineData(0, "42", 42)]
     [InlineData(0, "127", 127)]
+    [InlineData(0, "128", 128)]
+    [InlineData(0, "200", 200)]
+    [InlineData(0, "1023", 1023)]
     [InlineData(1, "42", 41)]
     [InlineData(1, "128", 127)]
-    public void DisplayNumberMapsToWireProgram(int offset, string entry, int expected)
+    [InlineData(1, "129", 128)]
+    [InlineData(1, "1024", 1023)]
+    public void DisplayNumberMapsToAbsolutePreset(int offset, string entry, int expected)
     {
         var state = new SenderState { NumberingOffset = offset };
         foreach (char digit in entry)
         {
-            state.Digit(digit - '0');
+            state.Digit(digit - '0', 4);
         }
 
         Assert.True(state.TryGetProgram(out int program)); Assert.Equal(expected, program);
     }
 
     [Theory]
-    [InlineData(0, "128")]
+    [InlineData(0, "1024")]
     [InlineData(1, "000")]
-    [InlineData(1, "129")]
+    [InlineData(1, "1025")]
+    [InlineData(0, "9999")]
     public void InvalidProgramIsNotSendable(int offset, string entry)
     {
         var state = new SenderState { NumberingOffset = offset };
         foreach (char digit in entry)
         {
-            state.Digit(digit - '0');
+            state.Digit(digit - '0', 4);
         }
 
         Assert.False(state.TryGetProgram(out _));
@@ -214,7 +220,7 @@ public sealed class SenderTests
     [InlineData(360, "Dark", 520)]
     public void RenderSenderAndConfiguration(int width, string theme, int height)
     {
-        var window = new SenderWindow(true, null) { Width = width, Height = height, RequestedThemeVariant = theme == "Light" ? ThemeVariant.Light : ThemeVariant.Dark };
+        var window = new SenderWindow(true, _ => { }, settings: new SenderSettings { Offset = 1, AutoSendDigits = 4 }) { Width = width, Height = height, RequestedThemeVariant = theme == "Light" ? ThemeVariant.Light : ThemeVariant.Dark };
         window.Show(); Dispatcher.UIThread.RunJobs();
         try
         {
@@ -225,6 +231,9 @@ public sealed class SenderTests
             }
 
             Directory.CreateDirectory(directory);
+            foreach (char digit in "1024") { window.Execute(digit.ToString()); }
+            Save("entry-1024");
+            window.Execute("Send");
             Save("sender");
             var senderScroll = window.GetVisualDescendants().OfType<ScrollViewer>().First(); senderScroll.Offset = new Vector(0, senderScroll.Extent.Height); Dispatcher.UIThread.RunJobs(); Save("sender-bottom");
             window.GetVisualDescendants().OfType<Button>().Single(c => c.Name == "OpenConfiguration").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); Dispatcher.UIThread.RunJobs();

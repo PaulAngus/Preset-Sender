@@ -7,6 +7,7 @@ public sealed record MidiBinding(int Kind, int Channel, int Number, string Comma
 public sealed class SenderState
 {
     public const int EntryLength = 3;
+    public const int PresetCount = 1024;
     public int NumberingOffset { get; set; }
     public int OutputChannel { get; set; } = 1;
     public int InputChannel { get; set; }
@@ -50,7 +51,7 @@ public sealed class SenderState
         }
 
         program = display - NumberingOffset;
-        return program is >= 0 and <= 127;
+        return program is >= 0 and < PresetCount;
     }
 
     public void Sent(int program) { PreviousProgram = LastProgram; LastProgram = program; Clear(); }

@@ -1,5 +1,25 @@
 # Preset Sender UX
 
+## 1024-preset range — 21 October 2026
+
+Preset numbering now shows 0–1023 or 1–1024. Sending a preset selects its bank
+with CC#0 before sending PC 0–127; Last sent shows the bank and actual wire PC.
+Next/Prev and Last operate across all eight banks. The existing Digits preference
+still controls manual and automatic entry length; set it to 4 for four-digit
+presets. Preserving this saved preference is a product choice.
+
+Reviewed current [Fluent 2 dropdown guidance](https://fluent2.microsoft.design/components/web/react/core/dropdown/usage)
+and [Windows combo-box guidance](https://learn.microsoft.com/en-us/windows/apps/develop/ui/controls/combo-box):
+retain descriptive labels and concise single-line options. The established
+numbering selector remains a two-option Avalonia ComboBox, preserving the
+existing settings layout; Windows suggests considering radio buttons for small
+option sets, but does not require them. No new controls or dismissal behavior
+are introduced. Rendered entry 1024, successful sending, range selection, and
+bank/PC details were inspected in light/dark at 460×740, 360×740 and 360×520;
+configuration details wrap at narrow sizes, with Save/Cancel still reachable.
+Frames are in `artifacts/preset-range/screenshots/`. All 194 functional checks
+pass, including outcome-based bank selection and keyboard/MIDI auto-send.
+
 ## Keyboard focus after sending — 12 October 2026
 
 The focused Send button became disabled when successful sending cleared entry, leaving subsequent keyboard digits outside the keypad's event route. Before disabling a focused Send button, focus now moves to the existing Digit 0 button with a visible keyboard focus indicator. This also handles clearing or invalidating entry while Send is focused. Focus in configuration controls remains untouched.

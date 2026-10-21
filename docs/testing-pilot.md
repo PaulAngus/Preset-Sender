@@ -108,6 +108,32 @@ is in `artifacts/bank-selection-tests/` (`bank-before.trx`, `bank-after.trx`,
 were updated for bank selection. This run does not establish physical FM9
 selection/readback, native transport, or packaged desktop acceptance.
 
+### 1024-preset addressing (21 October 2026)
+
+The sender now accepts absolute preset indices 0–1023, displayed as 1–1024 with
+one-based numbering. Every generated selection sends CC#0 for `index / 128`
+(integer division), then PC `index % 128` on each selected channel. Navigation
+and Last retain absolute preset indices and cross bank boundaries. This uses
+eight banks; it does not imply that an FM9 has more than its 512 preset slots.
+Four-digit entry uses the existing Digits setting set to 4.
+
+`BankSelectionTests` now verifies all 1024 selections against an independent
+eight-bank receiver, with both numbering settings, starting banks 0, 1, 2, 3,
+4, 7 and 127, channels 1, 6 and 16, and all-channel output. Additional checks
+cover every bank boundary in both directions, Last across banks, range wrapping,
+four-digit keyboard and MIDI auto-send, and retained entry when either the bank
+or PC send fails. The expanded checks reproduced 65 failures before the change;
+all 194 functional checks now pass. Evidence and rendered light/dark views are
+in `artifacts/preset-range/`. The earlier physical FM9 checks remain evidence for
+their recorded executable only; the 1024-slot receiver here is simulated.
+
+The published Windows EXE passes all three native MIDI checks. The macOS build
+and changed-source whitespace verification also pass. All three distribution
+copies and both desktop-visible local views match published SHA-256
+`91E21DAA600520D16E7D17A3DEC730A872FA6888DC6DE6DBA9B6E4590097295E`;
+paths and retained backups are recorded in
+`artifacts/preset-range/distribution-sha256.json`.
+
 ### Routing outcome fixes (20 October 2026)
 
 The two routing findings are now covered by `RoutingOutcomeTests` and fixed.

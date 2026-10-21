@@ -163,11 +163,11 @@ public sealed partial class SenderWindow : Window
             }
             else
             {
-                _status.Text = $"Enter a preset from {_state.NumberingOffset} to {127 + _state.NumberingOffset}.";
+                _status.Text = $"Enter a preset from {_state.NumberingOffset} to {SenderState.PresetCount - 1 + _state.NumberingOffset}.";
             }
         }
-        else if (command == "Next") { Send(_state.LastProgram is int current ? (current + 1) % 128 : 0); }
-        else if (command == "Prev") { Send(_state.LastProgram is int current ? (current + 127) % 128 : 127); }
+        else if (command == "Next") { Send(_state.LastProgram is int current ? (current + 1) % SenderState.PresetCount : 0); }
+        else if (command == "Prev") { Send(_state.LastProgram is int current ? (current + SenderState.PresetCount - 1) % SenderState.PresetCount : SenderState.PresetCount - 1); }
         else if (command == "Last")
         {
             if (_state.PreviousProgram is int previous) { Send(previous); }
@@ -183,14 +183,15 @@ public sealed partial class SenderWindow : Window
         int sentCount = 0;
         try
         {
+            int bank = program / 128, wireProgram = program % 128;
             int firstChannel = _state.OutputChannel == 0 ? 1 : _state.OutputChannel;
             int lastChannel = _state.OutputChannel == 0 ? 16 : _state.OutputChannel;
             for (int channel = firstChannel; channel <= lastChannel; channel++)
             {
-                // Entries address bank 0. Select it on every request so a receiver's
-                // previous bank (including forwarded bank changes) cannot offset the preset.
-                int bankSelect = 0xb0 | (channel - 1); // CC#0, value 0, on the same channel as the PC.
-                foreach (int message in new[] { bankSelect, MidiMessageEncoding.ProgramChange(program, channel) })
+                // Select the requested bank every time, including when it matches
+                // our previous send: the receiver's bank can change independently.
+                int bankSelect = 0xb0 | (channel - 1) | (bank << 16); // CC#0, on the same channel as the PC.
+                foreach (int message in new[] { bankSelect, MidiMessageEncoding.ProgramChange(wireProgram, channel) })
                 {
                     if (_testSend is not null) { _testSend(message); }
                     else { SendOutput(_outputPort, message); }
@@ -201,7 +202,7 @@ public sealed partial class SenderWindow : Window
 
             _state.Sent(program);
             string channels = _state.OutputChannel == 0 ? "All channels (1–16)" : $"Channel {_state.OutputChannel}";
-            _last.Text = $"Last sent: {_state.Display(program, _settings.AutoSendDigits)} · MIDI PC {program} · {channels}";
+            _last.Text = $"Last sent: {_state.Display(program, _settings.AutoSendDigits)} · Bank {bank} · MIDI PC {wireProgram} · {channels}";
             _status.Text = $"Sent preset {_state.Display(program, _settings.AutoSendDigits)}.";
         }
         catch (Exception ex)
