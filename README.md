@@ -8,15 +8,15 @@ Shared MIDI implementation: see [dependency and setup notes](dependencies/midi/R
 
 Startup detection runs off the UI thread, retries temporary service/transport failures up to three times, and allows ten seconds for discovery. **Refresh Devices** rechecks backend capabilities as well as ports, so a temporary fallback can recover without restarting. Refresh reuses any native probe still in progress instead of accumulating blocked calls. A genuinely unavailable service still falls back to legacy MIDI. The shared provider remains reusable; Preset Sender opts into its own bundled API directory rather than requiring the shared per-user installation.
 
-For loopMIDI on older Windows, see the [setup instructions](#loopmidi-setup-on-older-windows).
+For Windows 10, see [setup with loopMIDI](#windows-10-setup-with-loopmidi), including sending through MIDI Forwarder.
 
 A compact MIDI Program Change utility with its own settings, tests, branding and releases. This repository builds independently: its Windows and macOS MIDI backends, message encoder and platform configuration are included here. PresetMaestro is not required. The application remains named **Preset Sender**, although its repository is named **Preset-Forwarder**.
 
 ## Use
 
-On Windows, copy just `PresetSender.exe` to the other PC and launch it. The executable includes the .NET runtime, Windows MIDI API components and the API’s required private Visual C++ libraries; it automatically unpacks them into the runtime's per-user cache. No companion files or application installer are required. Windows MIDI Services must still be available for the built-in virtual output.
+On Windows, copy just `PresetSender.exe` to the other PC and launch it. The executable includes the .NET runtime, Windows MIDI API components and the API’s required private Visual C++ libraries. On eligible Windows 11 builds, the MIDI API is extracted into an app-private cache; Windows 10 never extracts or loads that API. No companion files or application installer are required. Built-in virtual output requires compatible Windows MIDI Services; on Windows 10, select an existing hardware output or use the loopMIDI setup below.
 
-1. Open `PresetSender.exe`, then click **Configure**. In **MIDI Connection**, select **Preset Sender (virtual device)** to publish an input that other apps on this PC can receive from. Click **Connect**, then select **Preset Sender** in the receiving app's MIDI input list. Alternatively, select an existing hardware or virtual output. An input controller is optional; the computer keyboard needs none. Connecting sends no program changes (virtual MIDI protocol discovery happens automatically). Connection settings and **Disconnect** remain visible.
+1. Open `PresetSender.exe`, then click **Configure**. In **MIDI Connection**, select an existing hardware or loopMIDI output, or, on eligible Windows 11, select **Preset Sender (virtual device)** to publish an input that other apps on this PC can receive from. Click **Connect**, then select the matching input in the receiving app (`Preset Sender` for the built-in publisher). An input controller is optional; the computer keyboard needs none. Connecting sends no program changes (built-in virtual MIDI protocol discovery happens automatically). Connection settings and **Disconnect** remain visible.
 2. In Configure → **Additional options**, set **Output channel** to a single channel (1–16) or **All channels**, and choose **Preset numbering**. All channels sends the same Program Change once on each of the 16 channels. This is the sending equivalent of the requested omni option; MIDI's formal Omni mode is a receiver setting. A receiver listening to all channels may process the change 16 times, so prefer a single channel for that receiver. The default is channel 1 and zero-based numbering: displayed `42` sends MIDI PC 42. One-based numbering sends PC 41 for displayed `42`.
 3. Click a keypad button to focus entry, then type `42` and press **Enter**, or click **Send**. Top-row and numpad digits work. With Auto-send off, digits wait for confirmation. **Escape/Clear** discards the pending entry; **Backspace** removes its last digit. Successful sending clears entry and leaves the last sent preset on the display. The sent number, wire PC value and channel are also recorded in Configure → Additional options. A failed send preserves entry and disconnects the ports.
 4. Choose **Digits** from **1 to 4** (default **3**) in **Entry Options** for both manual entry and auto-send. For example, 2 accepts `42`; 4 accepts `0042`. Set **Digits to 4** to enter presets 1000 and above. With **Auto-send** off, entry waits for Send/Enter and extra digits are rejected until you clear, edit or send. With it on, reaching the selected count starts the delay before sending. The supported preset range is 0–1023, or displayed 1–1024 with one-based numbering; each selection sends its bank and a MIDI PC value from 0–127.
@@ -27,26 +27,52 @@ The preset display uses the selected **Digits** width before and after sending, 
 
 Computer keyboard entry works while this utility is focused, with focus in the keypad. Configuration controls keep their own keyboard behavior. MIDI controller input works while connected, including when another application has focus. No global keyboard hooks are installed.
 
-## loopMIDI setup on older Windows
+## Windows 10 setup with loopMIDI
 
-Use this to send Program Change messages to another application on a supported Windows version when the built-in virtual publisher is unavailable. The shared library normally chooses its legacy MIDI backend automatically on older Windows. This optional route needs loopMIDI's driver. It is outside the supported Windows 10 virtual-presentation workflow; direct hardware MIDI needs no loopMIDI or API installer.
+The existing public build can send through manually created loopMIDI cables on Windows 10. No teVirtualMIDI SDK, SDK integration or separate private build is needed. Sender automatically uses its legacy MIDI backend there. Direct hardware MIDI needs no loopMIDI; select the hardware's output instead.
 
-1. Download and install [loopMIDI from Tobias Erichsen](https://www.tobias-erichsen.de/software/loopmidi.html), then start it on the same PC as Preset Sender and the receiving application.
-2. Create one port named `Preset Sender To App`.
-3. Keep loopMIDI running in the tray. Enable its autostart option if the MIDI apps start at sign-in. Its ports exist only while it runs and are specific to the Windows user account.
-4. In Preset Sender, open **Configure → MIDI connection**, click **Refresh Devices**, and select `Preset Sender To App` as the **output**. A MIDI input is optional when using the computer keyboard. Click **Connect**.
-5. In the receiving application, enable `Preset Sender To App` as a **MIDI input**, enable Program Change reception, and assign its presets to program numbers if needed. For a plug-in, the host/DAW must route that input into the plug-in.
+Start [loopMIDI from Tobias Erichsen](https://www.tobias-erichsen.de/software/loopmidi.html) on the same Windows 10 PC and Windows user account as Sender and the receiving application (install loopMIDI first if needed). A cable appears as both a MIDI output and a MIDI input: messages sent to its output reach applications listening to its input.
+
+### Sending to another app on this PC
+
+1. In loopMIDI, enter `Preset Sender To App` in **New port-name**, then click **+** to create the cable.
+2. In Sender, open **Configure → MIDI Connection**, click **Refresh Devices**, and select `Preset Sender To App` as **MIDI Out**. Leave **MIDI In** unselected if you use only the computer keyboard/keypad. Select the existing cable, rather than **Preset Sender (virtual device)**.
+3. Set **Output channel** to a channel the receiver listens on. Start with channel 1 if that matches the receiver. Click **Connect**, then **Save** to retain the settings.
+4. In the receiving application, enable `Preset Sender To App` as its **MIDI input**, enable Program Change reception, and assign its presets to program numbers if needed. For a plug-in, the host/DAW must route that input into the plug-in.
+5. Enter a known preset number and click **Send**. If the receiver selects the adjacent preset, check **Preset numbering**: zero-based display `42` sends PC 42, while one-based display `42` sends PC 41. The receiver must have a matching preset assignment.
 
 | Application | Selection |
 |---|---|
 | Preset Sender | MIDI **output**: `Preset Sender To App` |
 | Receiving application / DAW | MIDI **input**: `Preset Sender To App` |
 
-6. Start with **Output channel 1**, configure the receiver for channel 1 (or all channels), enter a known preset number and click **Send**. If the receiver selects the adjacent preset, check **Preset numbering** under Additional options: zero-based display `42` sends PC 42, while one-based display `42` sends PC 41. The receiver must have a matching preset assignment.
-
 For an optional software MIDI controller, create a different cable, such as `Preset Sender Controls`; choose it as the controller's output and Sender's input. Keep the sending cable separate, and avoid routing MIDI echo/thru back into Sender, especially when **Forward incoming MIDI** is enabled.
 
-**Ports missing or no preset change?** Create the port before opening the apps, click **Refresh Devices**, or restart a receiver that scans only at startup. Check that loopMIDI is still running, both apps use the same Windows account, the cable names match, the receiver accepts Program Change, and its MIDI channel and numbering agree. loopMIDI connects software on this PC; it does not create a hardware connection or a connection to another computer.
+### Sending through MIDI Forwarder to remote hardware
+
+Use two cables on the Windows 10 PC running Sender and **MIDI Forwarder Client**. You do not need the additional `Preset Sender To App` cable for this route.
+
+1. In loopMIDI, enter each name in **New port-name** and click **+**: `To MIDI Forwarder` and `From MIDI Forwarder`.
+2. Configure and start **MIDI Forwarder Server** on the computer connected to the hardware, selecting the hardware's MIDI input/output. The Server needs no loopMIDI cables for that hardware connection.
+3. In Forwarder Client, open **Settings → Connection**, click **Refresh MIDI ports**, and select the two cables as shown below. Enter the Server's TCP address and matching shared token, click **Save**, then **Connect**.
+4. In Sender, open **Configure → MIDI Connection**, click **Refresh Devices**, and select `To MIDI Forwarder` as **MIDI Out**. Leave **MIDI In** unselected for keyboard/keypad use; Sender does not need the return cable. Set the channel for the remote hardware, click **Connect**, then **Save**.
+
+| Application | Setting | Cable |
+|---|---|---|
+| Preset Sender | **MIDI Out** | `To MIDI Forwarder` |
+| Forwarder Client | **From MIDI app (input)** | `To MIDI Forwarder` |
+| Forwarder Client | **To MIDI app (output)** | `From MIDI Forwarder` |
+| Optional local MIDI editor | MIDI **output** / MIDI **input** | `To MIDI Forwarder` / `From MIDI Forwarder` |
+
+The outgoing route is **Sender → To MIDI Forwarder → Client → TCP network → Server → hardware**. The `From MIDI Forwarder` cable carries hardware replies to a local MIDI editor or other receiving app. Forwarder requires two different cables even when Sender only sends. Using the same cable for both Client directions can create feedback. See [Forwarder's setup instructions](https://github.com/PaulAngus/MIDI-Forwarder#loopmidi-cables-on-windows-10) for the complete Client/Server setup.
+
+### Subsequent sessions and troubleshooting
+
+Create the cable names once; loopMIDI remembers them and recreates the saved cables when it starts under the same Windows account. Right-click its tray icon and enable autostart at sign-in. Closing the configuration window leaves loopMIDI in the tray; exiting loopMIDI or signing out removes its ports. Keep it running throughout the session. Start loopMIDI before Sender, Forwarder Client or the receiving app. If an app started first, refresh its ports or restart it if it scans only at startup.
+
+Sender retains the selections after **Save**, but starts disconnected: click **Connect** each session. Forwarder retains its saved cable selections; its separate **Connect automatically on launch** preference controls whether it connects at startup. If the cables were unavailable at startup, start loopMIDI, refresh the ports and reconnect.
+
+**Ports missing or no preset change?** Check that loopMIDI is running under the same Windows account, the cable names and directions match the tables, and the receiver accepts the selected channel, bank and Program Change numbering. For remote hardware, also check that Forwarder Client is connected and the Server has the correct physical ports. loopMIDI connects software only on this PC; Forwarder supplies the network and hardware connection. Avoid MIDI echo/thru back into Sender or between Forwarder's two cables.
 
 If you need to force the shared legacy backend, close Sender and run this PowerShell block from its executable folder:
 
@@ -182,8 +208,9 @@ development profile and its broader transport tests remain separate.
 ## Supported releases and Mac distribution
 
 Support policy: Windows 10, Windows 11, macOS 26 and macOS 27. Windows builds
-are x64; Mac build targets are arm64 and x64. Virtual MIDI presentation is not
-supported on Windows 10. Existing hardware MIDI remains supported there.
+are x64; Mac build targets are arm64 and x64. Windows 10 uses hardware MIDI or
+manually created [loopMIDI cables](#windows-10-setup-with-loopmidi).
+Automatic virtual output requires eligible Windows 11 MIDI Services.
 
 Developers run `Publish-Mac.ps1 -Architecture arm64` (or `x64`) on the signing
 VM. It builds a fresh self-contained app, signs native components and then
