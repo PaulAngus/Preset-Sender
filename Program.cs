@@ -93,6 +93,7 @@ public sealed class SenderApp : Application
 {
     public override void Initialize()
     {
+        Name = "Preset Sender";
         Styles.Add(new FluentTheme());
         // Use the app's light/dark palette and control shape with Fluent interaction states.
         Resources.ThemeDictionaries[ThemeVariant.Light] = Palette("#E9EDF0", "#FFFFFF", "#F4F6F8", "#CDD5DC", "#17232D");
