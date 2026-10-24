@@ -2,10 +2,10 @@
 
 Build the selected release commit from a clean checkout. Use PowerShell 7 and the
 normal publish scripts; these are maintainer tools, not end-user requirements.
-Use a short checkout path on Windows. The existing Windows publish entry point
-still places restore/build files beneath the checkout and can exceed Windows
-path limits in deeply nested directories. The shared Mac cross-publish helper
-uses short temporary paths; that fix does not change the Windows entry point.
+The Windows and Mac publish entry points use fresh short temporary intermediate
+paths. Publish from a clean committed source tree. The Windows publisher records
+the source tree, full source-file hashes, source bundle, exact MIDI package pins
+and normal EXE/ZIP hashes. Existing versioned ZIPs are not replaced.
 
 On Windows:
 

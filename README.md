@@ -1,6 +1,6 @@
 # Preset Sender
 
-Current source release: [0.1.4](docs/releases/0.1.4.md).
+Current source release: [0.1.5](docs/releases/0.1.5.md).
 
 Version 0.1.3 restores standalone Windows packaging: the EXE contains both native Windows MIDI API files and automatically extracts verified copies into its own cache on Windows 11 25H2 or later. No separate MIDI API installer, companion files, runtime download or .NET installation is needed. Windows 10 uses hardware MIDI or user-installed loopMIDI; the bundled API is never extracted or loaded there. Compatible Windows MIDI Services must still be available for built-in virtual MIDI. Backend selection and extraction diagnostics are recorded at `%LOCALAPPDATA%\PresetSender\midi-backend.log`.
 

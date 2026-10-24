@@ -3,7 +3,7 @@
     <OutputType>WinExe</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>0.1.4</Version>
+    <Version>0.1.5</Version>
     <AssemblyTitle>Preset Sender</AssemblyTitle>
     <Product>Preset Sender</Product>
     <Title>Preset Sender</Title>
